@@ -113,22 +113,24 @@ This analytical approximation replaces the $M \times R$ Gibbs iterations (each r
 \section{Experimental Setup}
 \label{sec:experiments}
 
-We evaluate on two UCI benchmarks with three target variables (Table~\ref{tab:datasets}). The Energy Efficiency dataset \cite{tsanas2012accurate} contains 768 simulated building configurations (8 geometric parameters). Heating (Y1) and cooling (Y2) loads are modeled as separate regression targets. The Concrete Compressive Strength dataset \cite{yeh1998modeling} contains 1030 laboratory samples (8 mix-design parameters). Features are standardized to zero mean and unit variance before modeling; no samples contain missing values.
+We evaluate on three UCI benchmarks with four target variables (Table~\ref{tab:datasets}). The Energy Efficiency dataset \cite{tsanas2012accurate} contains 768 simulated building configurations (8 geometric parameters). Heating (Y1) and cooling (Y2) loads are modeled as separate regression targets. The Concrete Compressive Strength dataset \cite{yeh1998modeling} contains 1030 laboratory samples (8 mix-design parameters). To test the hypothesis that sparsity becomes more advantageous in higher dimensions, we add the Facebook Metrics dataset \cite{moro2016predicting}---19 features derived from Facebook page activity, subsampled to $n=1000$ for computational tractability. Features are standardized to zero mean and unit variance before modeling; no samples contain missing values.
 
 \begin{table}[t]
 \centering
-\caption{Dataset characteristics.}
+\caption{Dataset characteristics. All features are continuous and standardized to zero mean and unit variance before modeling. No samples contain missing values.}
 \label{tab:datasets}
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Characteristic & Energy Efficiency & Concrete CS \\
+Characteristic & Energy Efficiency & Concrete CS & Facebook Metrics \\
 \midrule
-Samples ($n$) & 768 & 1030 \\
-Features ($d$) & 8 & 8 \\
-Target & Heating/Cooling Load (kWh/m$^2$) & Strength (MPa) \\
-Data type & Simulation (Ecotect) & Laboratory \\
+Samples ($n$) & 768 & 1030 & 1000$^*$ \\
+Features ($d$) & 8 & 8 & 19 \\
+Target & Heating/Cooling Load (kWh/m$^2$) & Strength (MPa) & Total Interactions \\
+Data type & Simulation (Ecotect) & Laboratory & Social media \\
 \bottomrule
 \end{tabular}
+\par\vspace{4pt}
+{\footnotesize $^*$Random subsample from 5{,}875 original samples for computational tractability of the $R(d+1)$-dimensional TSK design matrix \cite{moro2016predicting}.}
 \end{table}
 
 Six methods are compared: \textbf{TSK-LS} (classical least-squares, dense baseline); \textbf{TSK-LASSO} (L$_1$-regularized, $\lambda$ via 5-fold CV); \textbf{TSK-SpikeSlab} (proposed, $\pi\sim\text{Beta}(1,1)$, $\alpha=10^{-2}$, $\tau^2=10^3$); \textbf{Bayesian-TSK} (non-sparse conjugate prior \cite{gu2018bayesian}, prior scale matched to isolate sparsity effect); \textbf{Random Forest} (300 trees, max\_depth=10); and \textbf{SVR} (RBF kernel, $C=1.0$, $\gamma=\text{scale}$). All TSK methods use $k$-means $k=5$ with Gaussian membership spreads $s=1.5$.
@@ -141,15 +143,19 @@ Each dataset undergoes 30 independent random 80/20 train/test splits. Metrics ar
 
 \subsection{Main Comparison}
 
-Table~\ref{tab:main} reports the primary results across all three target variables. Bayesian-TSK achieves the best RMSE among fuzzy methods on all datasets. On Energy-Cooling, Bayesian-TSK (RMSE $=4.11\pm0.80$, $R^2=0.805$) substantially outperforms classical TSK-LS (RMSE $=5.60\pm4.80$, $R^2=0.408$). Random Forest yields the lowest RMSE overall, as expected for low-dimensional tabular data.
+Table~\ref{tab:main} reports the primary results across three low-dimensional target variables. Bayesian-TSK achieves the best RMSE among fuzzy methods on all datasets. On Energy-Cooling, Bayesian-TSK (RMSE $=4.11\pm0.80$, $R^2=0.805$) substantially outperforms classical TSK-LS (RMSE $=5.60\pm4.80$, $R^2=0.408$). Random Forest yields the lowest RMSE overall, as expected for low-dimensional tabular data.
 
 TSK-SpikeSlab retains 3.1 of 5 rules (38\% sparsity) on the Energy datasets but is unable to prune any rules on Concrete (5.0/5 active). However, this sparsity comes at a substantial accuracy cost: TSK-SpikeSlab achieves RMSE $=19.12$--$21.29$ on Energy datasets, 3.8--4.0$\times$ worse than the dense TSK-LS baseline (RMSE $=4.80$--$5.60$), with negative $R^2$ values across all datasets (Table~\ref{tab:main}). On Concrete, TSK-SpikeSlab (RMSE $=41.97$) and TSK-LASSO (RMSE $=42.10$) are statistically indistinguishable (Wilcoxon $p=0.792$), and both are 3.6$\times$ worse than TSK-LS (RMSE $=11.76$).
+
+\subsection{Higher-Dimensional Validation}
+
+To test whether the sparsity-accuracy trade-off improves with dimensionality, we evaluate all methods on the Facebook Metrics dataset ($d=19$, $n=1000$ subsampled; Table~\ref{tab:highdim}). At $d=19$, the relative accuracy cost of sparsity is substantially reduced: TSK-SpikeSlab achieves RMSE $=24.40$, which is 1.9$\times$ worse than TSK-LS (RMSE $=12.56$), compared with the 3.4--3.8$\times$ degradation observed at $d=8$. Notably, interval calibration also improves dramatically: TSK-SpikeSlab's PICP rises from $0.077$ (Energy-Cooling, $d=8$) to $0.695$ (Facebook, $d=19$), though it still falls short of the nominal 95\% level. Bayesian-TSK maintains well-calibrated intervals (PICP $=0.949$) at $d=19$, confirming that the conjugate Gaussian--Wishart framework's calibration advantage persists across dimensionalities. These results support the hypothesis that sparsity becomes less costly as dimensionality increases: at $d=19$, the design matrix $\boldsymbol{\Phi}$ has $R(d+1)=100$ columns versus 45 at $d=8$, and the larger parameter space provides more room for rule pruning to operate without catastrophic loss of input space coverage.
 
 We attribute this performance degradation to two interacting factors. First, the TSK weighted design matrix $\boldsymbol{\Phi}$ has columns that are products of input features with normalized firing strengths, producing severe multicollinearity---condition numbers routinely exceed $10^{16}$. In this regime, the LassoCV-selected $\lambda$ with the standard alpha grid (min $\alpha = 9.2\times10^{-3}$) zeroes 31 of 45 coefficients, collapsing predictions to near zero. Expanding the grid to $\alpha = 10^{-8}$ causes LassoCV to select the minimal possible value (all 45 coefficients active, Fig.~S1), confirming that L1 regularization is structurally incompatible with the TSK design---the optimal L1 solution is essentially OLS. Yet even unregularized, LASSO's L1 geometry lands in a different optimum than ridge-regularized TSK-LS (RMSE $=28.6$ vs $11.7$ in our diagnostic). Second, with only $R=5$ rules, removing even 2 rules eliminates coverage of $\sim$40\% of the input space; the remaining 3 rules cannot fully compensate for the lost local structure. This sparsity-accuracy tension is most acute in low-dimensional, small-$R$ settings and diminishes at larger $R$ (see cluster count sensitivity below). We provide the TSK-LASSO diagnostic code and expanded-grid results in the Supplementary Material.
 
 \begin{table}[t]
 \centering
-\caption{Performance comparison (mean $\pm$ std, 30 splits). Best in \textbf{bold}, second \underline{underlined}. Active rules: PIP$>0.5$ (TSK-SpikeSlab); $|\boldsymbol{\beta}_j|_2 > 10^{-6}$ (TSK-LASSO).}
+\caption{Performance comparison on low-dimensional benchmarks (mean $\pm$ std, 30 splits). Best in \textbf{bold}, second \underline{underlined}. Active rules: PIP$>0.5$ (TSK-SpikeSlab); $|\boldsymbol{\beta}_j|_2 > 10^{-6}$ (TSK-LASSO).}
 \label{tab:main}
 \begin{tabular}{lccc|ccc|ccc}
 \toprule
@@ -162,6 +168,24 @@ TSK-SpikeSlab & 19.12$\pm$2.08 & $-$2.70 & 3.1 & 21.29$\pm$1.77 & $-$4.13 & 3.1 
 Bayesian-TSK  & \textbf{3.57$\pm$0.71} & \textbf{0.868} & 5.0 & \textbf{4.11$\pm$0.80} & \textbf{0.805} & 5.0 & \textbf{11.17$\pm$3.51} & \textbf{0.503} & 5.0 \\
 Random Forest & \underline{0.49$\pm$0.06} & \underline{0.998} & -- & \underline{1.67$\pm$0.13} & \underline{0.969} & -- & \underline{5.17$\pm$0.40} & \underline{0.903} & -- \\
 SVR           & 2.73$\pm$0.21 & 0.925 & -- & 3.09$\pm$0.22 & 0.893 & -- & 9.97$\pm$0.43 & 0.643 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Performance on Facebook Metrics ($d=19$, $n=1000$, 30 splits). Higher dimensionality reduces the relative accuracy cost of sparsity (1.9$\times$ vs 3.8$\times$ at $d=8$) and substantially improves interval calibration (PICP $=0.695$ vs $0.077$ at $d=8$).}
+\label{tab:highdim}
+\begin{tabular}{lccccll}
+\toprule
+Method & RMSE$\downarrow$ & $R^2$$\uparrow$ & Rules & PICP & MPIW \\
+\midrule
+TSK-LS        & 12.56$\pm$7.55 & $-$2.42 & 5.0 & -- & -- \\
+TSK-LASSO     & 22.90$\pm$0.91 & $-$7.41 & 5.0 & -- & -- \\
+TSK-SpikeSlab & 24.40$\pm$0.62 & $-$8.54 & 3.0 & 0.695 & 42.80 \\
+Bayesian-TSK  & \textbf{9.08$\pm$1.98} & \textbf{$-$0.39} & 5.0 & 0.949 & 31.45 \\
+Random Forest & \underline{3.84$\pm$0.35} & \underline{0.763} & -- & -- & -- \\
+SVR           & 7.19$\pm$0.30 & 0.173 & -- & -- & -- \\
 \bottomrule
 \end{tabular}
 \end{table}

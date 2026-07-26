@@ -54,11 +54,12 @@ results---aligns with ASC's standards for applied rigor.
 MANUSCRIPT METADATA
 
 - Figures: 7 (main text)
-- Tables: 4 (main text)
-- Word count: approximately 4,500 words (main text excluding references)
-- References: 31
+- Tables: 5 (main text)
+- Word count: approximately 6,400 words (main text excluding references)
+- References: 33
 - Supplementary material: ablation result tables (tau^2, alpha sensitivity),
-  TSK-LASSO diagnostic code and expanded-grid results
+  TSK-LASSO diagnostic code, extended-grid results, and Facebook Metrics (d=19)
+  high-dimensional validation
 
 DATA AND CODE AVAILABILITY
 
