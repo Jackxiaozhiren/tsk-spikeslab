@@ -41,19 +41,24 @@ with broad implications for sparse fuzzy system methods.
 JOURNAL FIT
 
 We believe this work is well-suited to Applied Soft Computing for three reasons.
-First, the paper's core methodology---a fuzzy inference system---falls squarely
-within ASC's soft computing scope. Second, the Bayesian-fuzzy hybridization
-exemplifies the hybrid intelligent systems that ASC champions as a preferred
-publication category. Third, the empirical characterization of the
-sparsity-accuracy-calibration trade-off on building energy and materials
-benchmarks provides the application-driven validation that distinguishes ASC
-from purely theoretical fuzzy systems journals. The paper's emphasis on when
-a method works and when it fails---rather than selective reporting of favorable
-results---aligns with ASC's standards for applied rigor.
+First, the paper's core methodology---a TSK fuzzy inference system with Bayesian
+variable selection---falls squarely within ASC's soft computing scope as a hybrid
+intelligent system that bridges fuzzy logic and probabilistic inference. Second,
+the work contributes to the ASC community's active discourse on sparse and
+interpretable fuzzy modeling (reflected in recent ASC publications on multivariable
+fuzzy rule-based models, explainability of fuzzy cognitive maps, and sparse fuzzy
+systems). Third, the paper's honest characterization of the sparsity-accuracy-calibration
+trade-off---documenting not only when the method succeeds but also when it fails---provides
+the diagnostic rigor that ASC values in application-driven soft computing research.
+We note that the core narrative of this paper is a diagnostic one: by establishing
+the boundary conditions under which analytical sparse Bayesian approximations are
+viable, we provide a baseline that the ASC community can build upon, rather than
+selectively reporting favorable results. This commitment to methodological honesty
+in applied contexts aligns with ASC's standards for scientific integrity.
 
 MANUSCRIPT METADATA
 
-- Figures: 7 (main text)
+- Figures: 4 (main text); supplementary figures: 3
 - Tables: 5 (main text)
 - Word count: approximately 6,400 words (main text excluding references)
 - References: 33
