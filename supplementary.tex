@@ -121,4 +121,36 @@ $10$ & 0.976 & 0.975 & $-5.79$ & 0.973 & 9.7 & 0.939 & 0.939 & $-8.82$ & 0.934 &
 
 \FloatBarrier
 
+\section{Ablation Isolating the Failure of the BIC Baseline}
+
+Table~\ref{tab:ablation} isolates which step of the BIC-plus-Laplace baseline causes its collapse on Energy-Cooling (10 splits, $R=5$). Four configurations are compared:
+
+\begin{enumerate}
+\item \textbf{BIC weights + BMA} -- all $2^R$ rule subsets are weighted by $\exp(-\mathrm{BIC}/2)$ and averaged, so no hard threshold and no Laplace covariance are used;
+\item \textbf{BIC-PIP + threshold + Laplace} -- the per-rule BIC inclusion probabilities are hard-thresholded at $0.5$, the selected model is fit by least squares, and the Laplace predictive covariance is used;
+\item \textbf{Gibbs-PIP + threshold + Laplace} -- the same prediction as (2), but the inclusion probabilities come from the Gibbs sampler rather than BIC;
+\item \textbf{Full BIC baseline} -- the as-implemented baseline of the main text, which additionally fits the selected model with ridge regularization.
+\end{enumerate}
+
+Three conclusions follow. First, averaging is the decisive change: BIC weights fed through BMA (row 1) restore dense accuracy and near-calibration ($R^2=0.95$, PICP $0.92$) even though the model probabilities still come from BIC, whereas hard-thresholding those same probabilities to a single model (row 2) clearly underperforms ($R^2=0.60$). Second, the Gibbs inclusion probabilities are reliable: hard-thresholding and Laplace prediction built on them (row 3) reach the dense baseline ($R^2=0.94$, PICP $0.94$). Third, the as-implemented baseline (row 4) collapses to $R^2=-2.5$, with part of the gap attributable to its ridge-regularized least-squares fit of the highly collinear TSK design matrix (condition number $\sim10^{18}$). Gibbs sampling with BMA is the only configuration that is simultaneously accurate and calibrated.
+
+\begin{table}[htbp]
+\centering
+\caption{Ablation of the BIC-plus-Laplace failure mechanism on Energy-Cooling (mean over 10 splits, $R=5$). Dense TSK-LS reference: $R^2=0.94$.}
+\label{tab:ablation}
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Configuration & $R^2$ & PICP & MPIW \\
+\midrule
+BIC weights + BMA (no threshold)     & $0.95$ & $0.92$ & $7.8$ \\
+BIC-PIP + threshold + Laplace (LS)   & $0.60$ & $0.93$ & $26.1$ \\
+Gibbs-PIP + threshold + Laplace (LS) & $0.94$ & $0.94$ & $8.4$ \\
+Full BIC baseline (as implemented)   & $-2.53$ & $0.00$ & $9.9$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
 \end{document}
