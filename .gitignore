@@ -6,6 +6,8 @@ __pycache__/
 *.blg
 *.log
 *.out
+*.fdb_latexmk
+*.fls
 *.spl
 *.synctex.gz
 manuscript_backup_*.tex
