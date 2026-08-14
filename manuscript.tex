@@ -41,15 +41,12 @@ Takagi--Sugeno--Kang fuzzy system \sep Bayesian inference \sep spike-and-slab pr
 \section{Introduction}
 \label{sec:introduction}
 
-% [De-AI] reduced em-dash density + varied register
 Predictive models in engineering increasingly need more than point estimates: designers require calibrated uncertainty to support decisions under limited data. Building-energy simulation exemplifies this regime: each simulation run is computationally expensive, yielding training sets of only hundreds of samples \cite{tsanas2012accurate,heliyon2024early}. Takagi--Sugeno--Kang (TSK) fuzzy systems \cite{takagi1985fuzzy} are attractive here because they combine nonlinear approximation with a compact, interpretable rule-based architecture. Their linear consequents make Bayesian treatment especially natural: posterior distributions, prediction intervals, and principled model selection.
 
-% [De-AI] dash + transition
 The Bayesian TSK literature has been hampered by two problems. The first is methodological. Recent work proposed spike-and-slab priors \cite{mitchell1988bayesian,george1993variable} for TSK rule selection, but used an analytical approximation, a BIC-based estimate of posterior inclusion probabilities followed by hard thresholding and a Laplace approximation to the predictive covariance, to avoid Markov chain Monte Carlo (MCMC). This approximation fails in two ways. Hard thresholding at posterior inclusion probability $0.5$ discards entire rules and collapses accuracy; and the Laplace covariance collapses once rules are pruned, producing prediction intervals that cover only $0$--$18\%$ of test points at a nominal 95\% level. The approximation thus sacrifices both accuracy and calibration in exchange for a sparsity that, on the relevant benchmark, is not actually warranted.
 
 The second problem is a \emph{reproducibility} one: a subtle implementation error in the construction of fuzzy membership functions propagates through every downstream baseline. Specifically, an implementation we encountered computes the spreads of Gaussian membership functions from the training data during model fitting, but then \emph{recomputes} them from test data (with incorrect cluster labels) at prediction time. Because the fuzzy partition at prediction time no longer matches the one learned during training, the reported accuracy of dense TSK baselines is severely depressed. We document that correcting this single bug raises the dense TSK least-squares baseline on the Energy Efficiency benchmark from $R^2=0.41$ to $0.94$ (Section~\ref{sec:repro}), providing a concrete corrected benchmark against which the methodological contribution below is validated.
 
-% [De-AI] parallel-parenthetical restructuring + dash
 In this paper we replace the analytical approximation with exact MCMC inference. We implement a block-Gibbs sampler for the spike-and-slab prior and predict by Bayesian model averaging (BMA), in which the predictive distribution is a mixture over posterior draws rather than a point estimate from a single selected model. Averaging over rule configurations retains partial information from uncertain rules and carries model uncertainty into the predictive variance, which avoids both the accuracy collapse and the interval collapse. We show that this recovers calibrated prediction intervals, PICP $=0.94$--$0.95$ at the nominal 95\% level, where the analytical approximation it replaces undercovers severely (PICP $\approx0$), at comparable interval width on the Energy targets.
 
 Our contributions are threefold:
@@ -67,7 +64,6 @@ The remainder is organized as follows. Section~\ref{sec:related} reviews related
 
 \subsection{Bayesian TSK Fuzzy Systems}
 
-% [De-AI] dash
 Gu and colleagues introduced Bayesian TSK classifiers with conjugate Gaussian--Wishart priors \cite{gu2017bayesian}, later extended to joint structure identification \cite{gu2018bayesian}, imbalanced classification \cite{gu2017imbalanced}, and probabilistic Gaussian centralization \cite{ieeeaccess2024interpretable}. These frameworks provide full posterior uncertainty estimates (posterior variances and prediction intervals) but employ non-sparsity-inducing priors, so every rule remains active regardless of relevance \cite{wang2021bayesian}. Our work builds directly on this line: the conjugate Gaussian--Wishart posterior is the correct baseline against which sparse Bayesian variants must be judged, and we use it to validate our MCMC implementation.
 
 \subsection{Sparse TSK and Bayesian Variable Selection}
