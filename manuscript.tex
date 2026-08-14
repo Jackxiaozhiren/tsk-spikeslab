@@ -56,7 +56,7 @@ Our contributions are threefold:
 \item \textbf{A verified dense baseline and a sparsity boundary.} We correct a membership-function bug that had depressed the dense TSK baselines ($R^2=0.41\rightarrow0.94$ on building-energy data), and characterize when sparsity helps: on low-dimensional data neither rule-level nor coefficient-level sparsity beats the dense baseline.
 \end{enumerate}
 
-The remainder is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:method} presents the TSK model, the membership bug, and the Gibbs-based Bayesian estimators. Section~\ref{sec:setup} describes the experimental setup. Section~\ref{sec:results} reports the reproducibility fix, the main comparison, calibration, and the sparsity boundary. Section~\ref{sec:discussion} discusses implications and limitations, and Section~\ref{sec:conclusion} concludes.
+The remainder is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:method} presents the TSK model, the membership bug, and the Gibbs-based Bayesian estimators. Section~\ref{sec:setup} describes the experimental setup. Section~\ref{sec:results} reports the corrected baseline, the main comparison, calibration, and the sparsity boundary. Section~\ref{sec:discussion} discusses implications and limitations, and Section~\ref{sec:conclusion} concludes.
 
 %============================================================
 \section{Related Work}
@@ -167,7 +167,7 @@ Four TSK methods are compared in the main experiments: \textbf{TSK-LS} (dense le
 \section{Results}
 \label{sec:results}
 
-\subsection{The Reproducibility Fix}
+\subsection{A Corrected Dense Baseline}
 \label{sec:repro}
 
 Fig.~\ref{fig:repro} contrasts the $R^2$ values reported under the buggy membership implementation with those obtained after correcting it. The improvement is large and consistent: TSK-LS rises from $0.41$ to $0.94$ (Energy Cooling), $0.57$ to $0.97$ (Energy Heating), and $0.44$ to $0.74$ (Concrete); the conjugate Bayesian-TSK rises from $0.80$ to $0.94$, $0.87$ to $0.97$, and $0.50$ to $0.74$. This confirms that the bug---not the model class---was responsible for the apparently mediocre baselines, and it establishes the corrected numbers as the reference for the comparisons below.
@@ -175,7 +175,7 @@ Fig.~\ref{fig:repro} contrasts the $R^2$ values reported under the buggy members
 \begin{figure}[tbhp]
 \centering
 \includegraphics[width=0.9\textwidth]{results/figures/fig1_repro_fix.pdf}
-\caption{Reproducibility fix. Reported $R^2$ (orange, as reported by the prior buggy pipeline) versus corrected $R^2$ (blue, training-time membership spreads reused at inference) for the dense TSK-LS and conjugate Bayesian-TSK baselines.}
+\caption{Corrected dense baselines. Reported $R^2$ (orange, as reported by the prior buggy pipeline) versus corrected $R^2$ (blue, training-time membership spreads reused at inference) for the dense TSK-LS and conjugate Bayesian-TSK baselines.}
 \label{fig:repro}
 \end{figure}
 
