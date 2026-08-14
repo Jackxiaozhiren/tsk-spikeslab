@@ -1,0 +1,59 @@
+\documentclass[11pt]{letter}
+\usepackage{geometry}
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\usepackage{hyperref}
+\setlength{\parskip}{0.8em}
+\setlength{\parindent}{0pt}
+\address{Guangdong University of Finance \\ Guangzhou, China \\ Email: 241734106@m.gduf.edu.cn \\ ORCID: 0009-0008-2164-4557}
+\signature{Zhiren Xiao}
+
+\begin{document}
+
+\begin{letter}{Professor Witold Pedrycz \\ Editor-in-Chief \\ \textit{Information Sciences} \\ Elsevier}
+
+\opening{Dear Professor Pedrycz,}
+
+We submit our manuscript entitled ``Exact Bayesian Spike-and-Slab Inference for Takagi--Sugeno--Kang Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals'' for consideration in \textit{Information Sciences}.
+
+\noindent\textbf{Contribution and Novelty}
+
+This paper presents the first \emph{exact} Bayesian inference procedure for spike-and-slab priors in Takagi--Sugeno--Kang (TSK) fuzzy systems, delivering calibrated model-averaged prediction intervals. Whereas prior work has coupled TSK systems either with conjugate priors without sparsity, or with frequentist $L_1$ regularization without uncertainty, we place a spike-and-slab prior on the rule consequents and perform posterior inference by block-Gibbs sampling with Bayesian model averaging (BMA). Three results structure the contribution.
+
+\textbf{First}, we provide the exact MCMC machinery: a block-Gibbs sampler whose full conditional for each rule's inclusion indicator is obtained in $\mathcal{O}(n(d+1)^2)$ time via the matrix-determinant and Woodbury identities, together with a BMA predictive distribution whose variance decomposes into aleatoric and model-uncertainty terms by the law of total variance. This yields well-calibrated 95\% prediction intervals (PICP $=0.94$--$0.95$) where the analytical BIC-plus-Laplace approximation it replaces undercovers catastrophically (PICP $=0.00$--$0.18$). We trace the failure to the hard-thresholding step and the collapse of the Laplace covariance, providing a constructive diagnosis of when analytical approximations to Bayesian model selection are safe---a question of direct interest to the uncertainty-quantification community.
+
+\textbf{Second}, we document and correct a silent membership-function implementation bug in which fuzzy-set spreads are recomputed from test data at prediction time, corrupting every TSK baseline. Correcting it raises the dense TSK least-squares baseline from $R^2=0.41$ to $0.94$ on building-energy data. Because this implementation pattern recurs in published TSK code, we release the corrected code and baselines as a reproducibility benchmark.
+
+\textbf{Third}, we characterize the boundary conditions of sparsity: under correct fuzzy c-means, neither rule-level nor coefficient-level sparsity beats the dense baseline on the low-dimensional building-energy domain. We report this as an honest boundary result, delineating precisely the regime in which sparsity-inducing priors earn their cost.
+
+\noindent\textbf{Journal Fit}
+
+We believe the manuscript is a strong fit for \textit{Information Sciences} for three reasons. First, its core object---Bayesian inference and calibrated uncertainty in a fuzzy inference system---sits squarely within the journal's scope of intelligent systems and information processing under uncertainty, and connects to your own work on fuzzy modeling and granular computing. Second, the methodological contribution (exact MCMC for spike-and-slab TSK with model-averaged intervals) is original rather than an incremental application. Third, the reproducibility contribution speaks to the field's increasing emphasis on correct, replicable baselines in soft computing.
+
+\noindent\textbf{Manuscript Metadata}
+
+\begin{itemize}
+\item Figures: 4 (main text)
+\item Tables: 1 (main text)
+\item References: 20
+\item Code and corrected baselines: \url{https://github.com/Jackxiaozhiren/tsk-spikeslab}
+\end{itemize}
+
+\noindent\textbf{Suggested Reviewers}
+
+\begin{enumerate}
+\item Prof.\ Xiaojing Gu, School of Information Science and Engineering, East China University of Science and Technology, China --- expertise in Bayesian Takagi--Sugeno--Kang fuzzy systems and posterior inference. (email to be filled)
+\item Prof.\ Shitong Wang, School of Artificial Intelligence and Computer Science, Jiangnan University, China --- expertise in TSK fuzzy systems and sparse/high-dimensional fuzzy modeling. (email to be filled)
+\item Prof.\ Thierry Den\oe ux, Heudiasyc, Universit\'e de Technologie de Compi\`egne, France --- expertise in evidential and uncertainty-aware regression for fuzzy systems. (email to be filled)
+\end{enumerate}
+
+\noindent\textbf{Originality and Ethical Statement}
+
+This manuscript is original, has not been published previously, and is not under consideration elsewhere. The datasets are publicly available from the UCI Machine Learning Repository. The author declares no competing interests.
+
+\closing{Sincerely,}
+
+Zhiren Xiao \\
+Guangdong University of Finance, Guangzhou, China
+
+\end{letter}
+\end{document}

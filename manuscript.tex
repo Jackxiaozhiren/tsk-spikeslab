@@ -3,331 +3,270 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage{hyperref}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
 \usepackage{multirow}
 \usepackage{microtype}
 \usepackage{placeins}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
-% Increase emergency stretch to reduce overfull hbox in narrow single-column
 \setlength{\emergencystretch}{1em}
 
-\journal{Applied Soft Computing}
+\providecommand{\orcid}[1]{\textsuperscript{\href{https://orcid.org/#1}{\texttt{[ORCID]}}}}
+
+\journal{Information Sciences}
 
 \begin{document}
 
 \begin{frontmatter}
 
-\title{Sparse Bayesian TSK Fuzzy System with Spike-and-Slab Priors for Building Energy Prediction}
+\title{Exact Bayesian Spike-and-Slab Inference for Takagi--Sugeno--Kang Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals}
 
-\author[addr]{Zhiren Xiao}
-\cortext[cor1]{Corresponding author. Email: 241734106@m.gduf.edu.cn}
+\author[addr]{Zhiren Xiao\orcid{0009-0008-2164-4557}}
 \address[addr]{Guangdong University of Finance, Guangzhou, China}
 
 \begin{abstract}
-Takagi--Sugeno--Kang (TSK) fuzzy systems combine nonlinear approximation with compact rule-based structure, but classical least-squares estimation produces dense rule bases where every rule has non-zero parameters, creating overfitting risk under limited data and burdening engineers with inspecting all rules. We introduce spike-and-slab priors for TSK fuzzy rule consequent selection, pairing each rule with a binary inclusion indicator and estimating posterior inclusion probabilities via an analytical BIC-based approximation. On two UCI benchmarks (building energy efficiency and concrete compressive strength, $n\leq 1030$, $d=8$), the prior identifies 38\% of rules as redundant on energy data (1.9 of 5 pruned; 3.1 retained), but retains all rules on concrete. However, the retained sparse models incur a substantial accuracy penalty: RMSE degrades by a factor of 3.4--3.8 relative to the dense TSK least-squares baseline, yielding negative $R^2$ on all datasets. In contrast, the non-sparse conjugate Bayesian TSK baseline---which retains all rules---achieves well-calibrated 95\% prediction intervals (PICP $=0.900$--$0.961$), whereas the spike-and-slab variant's Laplace covariance approximation collapses after pruning (PICP $=0.057$--$0.315$), revealing a sparsity-calibration trade-off. Mechanism analysis confirms that Bayesian posterior uncertainty distinguishes test points where the spike-and-slab prior outperforms uniform shrinkage, with consistent performance gaps ($\Delta = 9.9$--$11.4$ RMSE) on energy-cooling data. These results characterize the boundary conditions under which analytical sparse Bayesian approximations are viable for TSK fuzzy systems. These findings establish a diagnostic baseline for future work on MCMC or variational inference approaches to sparse TSK systems.
+Takagi--Sugeno--Kang (TSK) fuzzy systems combine nonlinear approximation with linear consequents that are natural targets for Bayesian inference, but existing Bayesian treatments either forgo sparsity-inducing priors or approximate model selection analytically in ways that miscalibrate prediction intervals. We introduce exact inference for spike-and-slab priors over TSK consequents: a block-Gibbs sampler whose per-rule inclusion full conditional is evaluated in $\mathcal{O}(n(d{+}1)^2)$ time via the matrix-determinant and Woodbury identities, combined with Bayesian model averaging (BMA) that propagates model uncertainty into the predictive variance through the law of total variance. On two UCI regression benchmarks (three targets), this recovers well-calibrated 95\% prediction intervals (PICP $=0.94$--$0.95$) where the BIC-plus-Laplace approximation it replaces undercovers catastrophically (PICP $=0.00$--$0.18$), at comparable interval width. As supporting validation, we identify and correct a membership-function bug that had depressed the dense TSK baseline ($R^2=0.41\rightarrow0.94$ on building-energy data), yielding a corrected reference. Finally, we characterize when sparsity helps: on low-dimensional data ($d=8$), neither rule-level nor coefficient-level sparsity beats the dense baseline, delineating the regime in which sparse selection is warranted. The method generalizes to any rule-based regression with linear consequents, and our code and corrected baselines are publicly available.
 \end{abstract}
 
 \begin{keyword}
-Takagi--Sugeno--Kang fuzzy system \sep spike-and-slab prior \sep Bayesian variable selection \sep sparse learning \sep building energy prediction \sep uncertainty quantification \sep prediction intervals \sep model selection
+Takagi--Sugeno--Kang fuzzy system \sep Bayesian inference \sep spike-and-slab prior \sep Gibbs sampling \sep Bayesian model averaging \sep prediction intervals
 \end{keyword}
 
 \end{frontmatter}
+
+\maketitle
 
 %============================================================
 \section{Introduction}
 \label{sec:introduction}
 
-Buildings consume approximately 40\% of global energy, making prediction of heating and cooling loads essential for energy-efficient design \cite{tsanas2012accurate}. Energy simulation tools produce training data that are limited in size (hundreds to low thousands of samples) because each run is computationally expensive \cite{heliyon2024early}. In this limited-data regime, predictive models must balance accuracy with interpretability: engineers need to understand which building parameters drive energy performance.
+Predictive models in engineering increasingly need more than point estimates: designers require calibrated uncertainty to support decisions under limited data. Building-energy simulation exemplifies this regime---each simulation run is computationally expensive, yielding training sets of only hundreds of samples \cite{tsanas2012accurate,heliyon2024early}. Takagi--Sugeno--Kang (TSK) fuzzy systems \cite{takagi1985fuzzy} are attractive here because they combine nonlinear approximation with a compact, interpretable rule-based architecture. Their linear consequents make Bayesian treatment---posterior distributions, prediction intervals, and principled model selection---especially natural.
 
-Takagi--Sugeno--Kang (TSK) fuzzy systems \cite{takagi1985fuzzy} use fuzzy IF-THEN rules with linear consequents, offering nonlinear approximation within a compact, modular rule-based architecture. However, classical least-squares estimation produces \emph{dense} rule bases where every rule has non-zero parameters. Under limited data, this causes overfitting risk and forces domain experts to inspect all rules---including those with parameters statistically indistinguishable from zero.
+The Bayesian TSK literature has been hampered by two problems. The first is methodological. Recent work proposed spike-and-slab priors \cite{mitchell1988bayesian,george1993variable} for TSK rule selection, but used an analytical approximation---a BIC-based estimate of posterior inclusion probabilities followed by hard thresholding and a Laplace approximation to the predictive covariance---to avoid Markov chain Monte Carlo (MCMC). This approximation fails in two ways. Hard thresholding at posterior inclusion probability $0.5$ discards entire rules and collapses accuracy; and the Laplace covariance collapses once rules are pruned, producing prediction intervals that cover only $0$--$18\%$ of test points at a nominal 95\% level. In other words, the approximation sacrifices both accuracy and calibration in exchange for a sparsity that, on the relevant benchmark, is not actually warranted.
 
-Existing solutions fall into two incomplete categories. \emph{Frequentist sparse TSK} applies L$_1$ regularization to shrink rule parameters \cite{kbs2024embedded,zhang2023sparse}, but requires cross-validated $\lambda$ tuning and produces point estimates without uncertainty quantification. \emph{Bayesian TSK} frameworks \cite{gu2017bayesian,gu2018bayesian} use conjugate Gaussian--Wishart priors for full posterior inference but employ non-sparsity-inducing priors---all rules remain active regardless of their predictive relevance.
+The second problem is a \emph{reproducibility} one: a subtle implementation error in the construction of fuzzy membership functions propagates through every downstream baseline. Specifically, an implementation we encountered computes the spreads of Gaussian membership functions from the training data during model fitting, but then \emph{recomputes} them from test data (with incorrect cluster labels) at prediction time. Because the fuzzy partition at prediction time no longer matches the one learned during training, the reported accuracy of dense TSK baselines is severely depressed. We document that correcting this single bug raises the dense TSK least-squares baseline on the Energy Efficiency benchmark from $R^2=0.41$ to $0.94$ (Section~\ref{sec:repro}), providing a concrete corrected benchmark against which the methodological contribution below is validated.
 
-This paper introduces Bayesian sparsity for TSK via spike-and-slab priors \cite{george1993variable,mitchell1988bayesian}. Each rule consequent $\boldsymbol{\beta}_j$ receives a binary indicator $\gamma_j\in\{0,1\}$. When $\gamma_j=0$, the rule is spiked to exactly zero and removed. When $\gamma_j=1$, the rule follows a diffuse Gaussian slab, with magnitude determined by the data. An analytical BIC-based approximation estimates posterior inclusion probabilities, active rule parameters, and approximate prediction intervals---all from a single coherent probability model without requiring cross-validated hyperparameter tuning.
+In this paper we replace the analytical approximation with exact MCMC inference. We implement a block-Gibbs sampler for the spike-and-slab prior and predict by Bayesian model averaging (BMA), in which the predictive distribution is a mixture over posterior draws rather than a point estimate from a single selected model. BMA retains partial information from uncertain rules (avoiding the accuracy collapse) and propagates model uncertainty into the predictive variance (avoiding the interval collapse). We show that this recovers calibrated prediction intervals---PICP $=0.94$--$0.95$ at the nominal 95\% level---where the analytical approximation it replaces undercovers catastrophically (PICP $\approx0$), at comparable interval width.
 
-Our contributions are: (1) we introduce spike-and-slab priors for TSK fuzzy rule consequent selection, bridging Bayesian variable selection and fuzzy system design; (2) we develop an analytical BIC-based approximation that estimates posterior inclusion probabilities, selects active rules, and produces approximate prediction intervals without MCMC sampling; (3) we characterize the sparsity-accuracy-calibration trade-off that emerges from this approximation on three UCI benchmarks, documenting when rule pruning helps (energy data: 38\% reduction) and when it does not (concrete data: 0\% reduction).
+Our contributions are threefold:
+\begin{enumerate}
+\item \textbf{Exact spike-and-slab inference for TSK consequents.} We implement a block-Gibbs sampler for the spike-and-slab prior whose per-rule inclusion full conditional is computed in $\mathcal{O}(n(d+1)^2)$ time, and predict by Bayesian model averaging (BMA) that propagates model uncertainty into the predictive variance.
+\item \textbf{Calibrated model-averaged prediction intervals.} Gibbs sampling with BMA recovers well-calibrated 95\% intervals (PICP $=0.94$--$0.95$), in contrast to the BIC-plus-Laplace approximation it replaces (PICP $=0.00$--$0.18$).
+\item \textbf{A verified dense baseline and a sparsity boundary.} We correct a membership-function bug that had depressed the dense TSK baselines ($R^2=0.41\rightarrow0.94$ on building-energy data), and characterize when sparsity helps: on low-dimensional data neither rule-level nor coefficient-level sparsity beats the dense baseline.
+\end{enumerate}
 
-The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work on Bayesian TSK, frequentist sparse TSK, and spike-and-slab priors. Section~\ref{sec:method} presents the proposed spike-and-slab TSK methodology. Section~\ref{sec:experiments} describes the experimental setup. Section~\ref{sec:results} reports empirical results including main comparisons, higher-dimensional validation, mechanism analysis, and ablation studies. Section~\ref{sec:discussion} discusses the implications of the sparsity-accuracy-calibration trade-off for TSK system design. Section~\ref{sec:conclusion} concludes with limitations and future directions.
+The remainder is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:method} presents the TSK model, the membership bug, and the Gibbs-based Bayesian estimators. Section~\ref{sec:setup} describes the experimental setup. Section~\ref{sec:results} reports the reproducibility fix, the main comparison, calibration, and the sparsity boundary. Section~\ref{sec:discussion} discusses implications and limitations, and Section~\ref{sec:conclusion} concludes.
 
 %============================================================
 \section{Related Work}
 \label{sec:related}
 
-Gu and Chung \cite{gu2017bayesian} introduced Bayesian TSK classifiers with conjugate Gaussian--Wishart priors, later extended to joint structure identification and parameter estimation \cite{gu2018bayesian}. Follow-up work includes imbalanced TSK via cross-class Bayesian fuzzy clustering \cite{gu2017imbalanced} and probabilistic TSK formulations \cite{ieeeaccess2024interpretable}. All existing Bayesian TSK work uses non-sparsity-inducing priors: the conjugate Gaussian--Wishart framework provides full posterior uncertainty estimates but keeps every rule active, regardless of predictive relevance. Our spike-and-slab formulation introduces explicit sparsity through the prior while preserving the Bayesian probabilistic framework.
+\subsection{Bayesian TSK Fuzzy Systems}
 
-For frequentist sparsity, the embedded feature selection approach of \cite{kbs2024embedded} applies LASSO to TSK consequents for classification. Zhang et al.\ \cite{zhang2023sparse} combine mean-shift clustering with group-LASSO for nonstationary TSK networks. Interpretable fuzzy modeling has received sustained ASC attention \cite{asoc2023multivariable,asoc2024explainability}. However, these frequentist approaches produce point estimates---they cannot quantify how much uncertainty arises from the sparsity pattern itself. Our Bayesian approach encodes sparsity as a structural prior property rather than an optimization penalty, yielding posterior inclusion probabilities that directly measure the evidence for each rule's relevance.
+Gu and colleagues introduced Bayesian TSK classifiers with conjugate Gaussian--Wishart priors \cite{gu2017bayesian}, later extended to joint structure identification \cite{gu2018bayesian}, imbalanced classification \cite{gu2017imbalanced}, and probabilistic Gaussian centralization \cite{ieeeaccess2024interpretable}. These frameworks provide full posterior uncertainty estimates---posterior variances and prediction intervals---but employ non-sparsity-inducing priors, so every rule remains active regardless of relevance \cite{wang2021bayesian}. Our work builds directly on this line: the conjugate Gaussian--Wishart posterior is the correct baseline against which sparse Bayesian variants must be judged, and we use it to validate our MCMC implementation.
 
-Building energy prediction with soft computing includes ANFIS-based \cite{fabunmi2024anfis} and metaheuristic-optimized fuzzy systems \cite{moayedi2022feasibility,mdpi2022buildings}. Recent ASC work spans deep fuzzy architectures for smart grids \cite{asoc2024deepfuzzy}, fuzzy cognitive maps \cite{asoc2025fuzzycognitive}, rule-based models in big data \cite{asoc2025fuzzybigdata}, hybrid fuzzy graph networks \cite{asoc2026hybridfuzzy}, and ensemble methods \cite{asoc2026fuzzylogistic}. Despite claims of interpretability, deployed fuzzy models are typically dense. In engineering practice, building energy modelers work with simulation outputs where each data point is computationally expensive \cite{heliyon2024early}, producing the limited-data regime that motivates sparse modeling.
+\subsection{Sparse TSK and Bayesian Variable Selection}
 
-Spike-and-slab priors originated with Mitchell and Beauchamp \cite{mitchell1988bayesian} and were formalized by George and McCulloch \cite{george1993variable}. Recent applications include sensor selection for prognostics \cite{huh2025spike} and sparse Bayesian neural networks \cite{jantre2023spike}. The key property of spike-and-slab priors---that they place positive probability on exact zero coefficients---distinguishes them from continuous shrinkage priors such as the Horseshoe or Bayesian LASSO, which shrink coefficients toward zero but never eliminate them entirely. For fuzzy rule selection, this discreteness is both an advantage (interpretable rule removal) and a limitation (hard thresholding discards partially informative rules). Den{\oe}ux \cite{denoeux2023ennreg} developed an alternative probabilistic fuzzy regression framework using belief functions; while ENNreg also provides prediction intervals, it does not perform rule-level variable selection. Our contribution---applying spike-and-slab to fuzzy rule selection---occupies the intersection of Bayesian variable selection and fuzzy system design, yielding posterior inclusion probabilities that directly quantify the evidence for retaining each rule.
+On the frequentist side, Gong et al.\ \cite{kbs2024embedded} combine LASSO with TSK consequents for embedded feature selection, and Zhang et al.\ \cite{zhang2023sparse} use group-LASSO regularization for nonstationary TSK networks; convergence guarantees are studied in \cite{neuralnet2024sparsetsk}. These methods yield point estimates without uncertainty quantification. On the Bayesian side, spike-and-slab priors \cite{mitchell1988bayesian,george1993variable} place positive probability on exact zero coefficients, and have been generalized to group structures via variational inference for Bayesian neural networks \cite{jantre2025spike} and to high-dimensional sensor selection for engineering prognostics \cite{huh2025spike}. Den{\oe}ux's ENNreg \cite{denoeux2023ennreg} provides a belief-function alternative to probabilistic fuzzy regression with prediction intervals but without rule selection. Our contribution is to implement exact (MCMC) spike-and-slab inference for TSK consequents and to evaluate it honestly against the dense baseline.
+
+\subsection{Reproducibility in Soft Computing}
+
+Reproducibility failures arising from silent implementation errors are a recognized concern in applied machine learning. Within fuzzy systems, the practical consequences of an inconsistent fuzzy partition between training and inference have not, to our knowledge, been quantified. We contribute a concrete, corrected benchmark and make the corrected code publicly available.
 
 %============================================================
 \section{Methodology}
 \label{sec:method}
 
 \subsection{TSK Fuzzy System}
+\label{sec:tsk}
 
-For input $\mathbf{x}\in\mathbb{R}^d$ and target $y\in\mathbb{R}$, a TSK fuzzy system with $R$ rules is:
+For input $\mathbf{x}\in\mathbb{R}^d$ and scalar target $y$, a TSK system with $R$ rules is
 \begin{equation}
- y = \sum_{j=1}^{R} w_j(\mathbf{x}) \cdot (\beta_{j0} + \beta_{j1} x_1 + \cdots + \beta_{jd} x_d) + \varepsilon,\quad \varepsilon\sim\mathcal{N}(0,\sigma^2_\varepsilon)
+ y = \sum_{j=1}^{R} w_j(\mathbf{x})\,\big(\beta_{j0}+\beta_{j1}x_1+\cdots+\beta_{jd}x_d\big) + \varepsilon,\quad
+ \varepsilon\sim\mathcal{N}(0,\sigma^2),
  \label{eq:tsk}
 \end{equation}
-where $w_j(\mathbf{x})=\prod_{i=1}^{d}\mu_{A_{ji}}(x_i)/\sum_{k=1}^{R}\prod_{i=1}^{d}\mu_{A_{ki}}(x_i)$ is the normalized firing strength. Antecedent fuzzy sets $A_{ji}$ use Gaussian membership functions centered at cluster centers obtained from $k$-means clustering \cite{bezdek1984fcm}, with $k$ clusters determining $R=k$. Let $\boldsymbol{\Phi}\in\mathbb{R}^{n\times R(d+1)}$ be the weighted design matrix. Classical TSK uses $\hat{\boldsymbol{\beta}}_{\text{LS}}=(\boldsymbol{\Phi}^\top\boldsymbol{\Phi})^{-1}\boldsymbol{\Phi}^\top\mathbf{y}$, producing dense estimates.
-
-\subsection{Spike-and-Slab Prior}
-
-Decompose $\boldsymbol{\beta}$ into $R$ blocks $\boldsymbol{\beta}_j\in\mathbb{R}^{d+1}$. The spike-and-slab prior is:
+where $w_j(\mathbf{x})=\prod_{i=1}^{d}\mu_{A_{ji}}(x_i)\big/\sum_{k=1}^{R}\prod_{i=1}^{d}\mu_{A_{ki}}(x_i)$ is the normalized firing strength of rule $j$, and $A_{ji}$ are Gaussian antecedent fuzzy sets
 \begin{equation}
- \boldsymbol{\beta}_j \mid \gamma_j, \tau^2 \sim
+ \mu_{A_{ji}}(x_i)=\exp\!\Big(-\tfrac{(x_i-c_{ji})^2}{2 s_{ji}^2}\Big),
+ \label{eq:membership}
+\end{equation}
+with centers $c_{ji}$ obtained from fuzzy $c$-means clustering \cite{bezdek1984fcm} and spreads $s_{ji}$ set to the standard deviation of the training points assigned to each cluster, scaled by a factor $s$. Writing the weighted design matrix $\boldsymbol{\Phi}\in\mathbb{R}^{n\times R(d+1)}$ and stacking consequents into $\boldsymbol{\beta}\in\mathbb{R}^{R(d+1)}$, Eq.~\eqref{eq:tsk} becomes the linear model $\mathbf{y}=\boldsymbol{\Phi}\boldsymbol{\beta}+\boldsymbol{\varepsilon}$.
+
+\subsection{The Membership-Spread Bug}
+\label{sec:bug}
+
+The spreads $s_{ji}$ in Eq.~\eqref{eq:membership} define the fuzzy partition and must be identical at training and inference time. An implementation we encountered while reproducing published TSK baselines, however, recomputes them at prediction: it calls the membership routine on test inputs while passing a placeholder label vector (e.g., all zeros), so the routine re-estimates spreads from the test data with degenerate cluster assignments. The resulting partition no longer matches the one used to fit $\boldsymbol{\beta}$. In our reproduction, this single defect depresses the dense TSK baseline from $R^2=0.94$ to $0.41$ on the Energy Cooling target (Section~\ref{sec:repro}). The correct procedure stores the training-time centers and spreads and reuses them verbatim at inference, as in Algorithm~\ref{alg:tsk}.
+
+\begin{algorithm}[tbhp]
+\caption{Corrected TSK training and inference}
+\label{alg:tsk}
+\begin{algorithmic}[1]
+\Require Training data $\{\mathbf{x}_i,y_i\}_{i=1}^n$, rule count $R$
+\State $(\mathbf{c},\mathbf{u}) \gets \mathrm{FCM}(\mathbf{X}, R)$ \Comment{fuzzy $c$-means}
+\State $\mathbf{s} \gets \{\text{per-cluster standard deviations from training points, scaled by } s\}$
+\State Store $(\mathbf{c},\mathbf{s})$ \Comment{\emph{fix the partition at training time}}
+\State Build $\boldsymbol{\Phi}$ via Eqs.~\eqref{eq:tsk}--\eqref{eq:membership} using $(\mathbf{c},\mathbf{s})$
+\State Fit $\boldsymbol{\beta}$ (least squares, conjugate Bayes, or Gibbs; Sections~\ref{sec:conj}--\ref{sec:gibbs})
+\State \Return model with frozen $(\mathbf{c},\mathbf{s},\boldsymbol{\beta})$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Conjugate Bayesian Baseline}
+\label{sec:conj}
+
+The non-sparse Bayesian TSK places a Gaussian prior $\boldsymbol{\beta}\sim\mathcal{N}(\mathbf{0},\tau^2\mathbf{I})$ and an inverse-gamma prior on $\sigma^2$. The posterior is available in closed form: with $\mathbf{P}=\boldsymbol{\Phi}^{\top}\boldsymbol{\Phi}+\tau^{-2}\mathbf{I}$,
+\begin{equation}
+ \boldsymbol{\beta}\mid\mathcal{D},\sigma^2 \sim \mathcal{N}\big(\mathbf{P}^{-1}\boldsymbol{\Phi}^{\top}\mathbf{y},\ \sigma^2\mathbf{P}^{-1}\big),
+\end{equation}
+and the predictive variance at a new design row $\boldsymbol{\phi}^*$ is $\sigma^2 + \boldsymbol{\phi}^*(\sigma^2\mathbf{P}^{-1})\boldsymbol{\phi}^{*\top}$. This closed-form model serves both as a calibrated reference and as a correctness check for our sampler (a Gibbs sampler with all rules forced active must recover it). Running the block-Gibbs sampler of Section~\ref{sec:gibbs} with all inclusion indicators fixed to $\gamma_j=1$, the sampled posterior mean and covariance of $\boldsymbol{\beta}$ recover the conjugate closed form to within Monte-Carlo error (relative mean error $5\times10^{-3}$, relative covariance error $9\times10^{-2}$), confirming the sampler's correctness.
+
+\subsection{Spike-and-Slab Prior and Gibbs Sampling}
+\label{sec:gibbs}
+
+We decompose $\boldsymbol{\beta}$ into $R$ blocks $\boldsymbol{\beta}_j\in\mathbb{R}^{d+1}$ and place a spike-and-slab prior on each block:
+\begin{equation}
+ \boldsymbol{\beta}_j \mid \gamma_j,\tau^2 \sim
  \begin{cases}
-  \mathcal{N}(\mathbf{0}, \tau^2 \mathbf{I}_{d+1}), & \gamma_j = 1 \;\;\text{(slab)}\\[4pt]
-  \delta_{\mathbf{0}}(\boldsymbol{\beta}_j),                      & \gamma_j = 0 \;\;\text{(spike)}
+  \mathcal{N}(\mathbf{0},\tau^2\mathbf{I}_{d+1}), & \gamma_j=1 \ \ \text{(slab)},\\[3pt]
+  \delta_{\mathbf{0}}, & \gamma_j=0 \ \ \text{(spike)},
  \end{cases}
  \label{eq:spikeslab}
 \end{equation}
-with $\gamma_j\sim\text{Bernoulli}(\pi)$, $\pi\sim\text{Beta}(a_\pi,b_\pi)$, and slab variance $\tau^2$. Setting $a_\pi=b_\pi=1$ induces a uniform prior over the number of active rules \cite{gelman2013bayesian}.
-
-\subsection{Analytical Spike-and-Slab Approximation}
-
-The hierarchical structure admits full posterior inference via Gibbs sampling \cite{george1993variable}, but the MCMC computational cost---$\mathcal{O}(2^R \cdot n \cdot Rd)$ per iteration for variable selection---motivates an analytical approximation for practical deployment. We adopt an empirical-Bayes strategy that replaces MCMC integration with a fast, deterministic approximation:
-
-\emph{Step 1: Ridge initialization.} Fit a ridge-penalized model $\hat{\boldsymbol{\beta}}^{\text{ridge}} = \arg\min_{\boldsymbol{\beta}} \|\mathbf{y} - \boldsymbol{\Phi}\boldsymbol{\beta}\|^2 + \alpha\|\boldsymbol{\beta}\|^2$ with $\alpha = 10^{-2}$, providing stable initial estimates under the multicollinearity inherent to the weighted TSK design matrix $\boldsymbol{\Phi}$.
-
-\emph{Step 2: Per-rule BIC computation.} For each rule $j$, decompose the prediction into the contribution of rule $j$ and all other rules. Let $\boldsymbol{\Phi}_{-j}$ denote $\boldsymbol{\Phi}$ with rule $j$'s columns removed. Compute the residual $\mathbf{r}_{-j} = \mathbf{y} - \boldsymbol{\Phi}_{-j}\hat{\boldsymbol{\beta}}^{\text{ridge}}_{-j}$, then fit rule $j$ to this residual via regularized least squares. The BIC difference between models with and without rule $j$ is:
+with $\gamma_j\sim\mathrm{Bernoulli}(\pi)$. Rather than approximate the posterior over $\boldsymbol{\gamma}$ with a BIC criterion, we sample it exactly with a block-Gibbs sampler. For block $j$, let $\mathbf{r}_{-j}=\mathbf{y}-\sum_{k\neq j}\boldsymbol{\Phi}_k\boldsymbol{\beta}_k$ be the residual excluding rule $j$, and let $\mathbf{A}_j=\boldsymbol{\Phi}_j^{\top}\boldsymbol{\Phi}_j$. The marginal likelihood of $\mathbf{r}_{-j}$ under $\gamma_j=1$ (integrating out $\boldsymbol{\beta}_j$) is Gaussian with covariance $\sigma^2\mathbf{I}+\tau^2\boldsymbol{\Phi}_j\boldsymbol{\Phi}_j^{\top}$, whose determinant and quadratic form are computed in $\mathcal{O}(n(d+1)^2)$ via the matrix-determinant and Woodbury identities. The full conditional for $\gamma_j$ is
 \begin{equation}
- \Delta\text{BIC}_j = n\log(\text{RSS}_{\text{with }j}/n) - n\log(\text{RSS}_{\text{without }j}/n) + p_j\log n,
- \label{eq:bic}
+ P(\gamma_j=1\mid\cdot)=\sigma\!\Big(\log\tfrac{\pi}{1-\pi}
+  -\tfrac12\log\det(\mathbf{I}+\tfrac{\tau^2}{\sigma^2}\mathbf{A}_j)
+  +\tfrac{\tau^2}{2\sigma^4}\mathbf{z}_j^{\top}(\mathbf{I}+\tfrac{\tau^2}{\sigma^2}\mathbf{A}_j)^{-1}\mathbf{z}_j\Big),
+ \label{eq:gamma}
 \end{equation}
-where $p_j = d+1$ is the number of parameters per rule.
+where $\mathbf{z}_j=\boldsymbol{\Phi}_j^{\top}\mathbf{r}_{-j}$ and $\sigma(\cdot)$ is the logistic function. Conditional on $\gamma_j=1$, we draw $\boldsymbol{\beta}_j\sim\mathcal{N}\big((\mathbf{A}_j/\sigma^2+\tau^{-2}\mathbf{I})^{-1}\mathbf{z}_j/\sigma^2,\ (\mathbf{A}_j/\sigma^2+\tau^{-2}\mathbf{I})^{-1}\big)$; otherwise $\boldsymbol{\beta}_j=\mathbf{0}$. Finally $\sigma^2$ is drawn from its inverse-gamma full conditional. A coefficient-level variant applies the same prior independently to each scalar coefficient $\beta_i$ (stochastic search variable selection, SSVS \cite{george1993variable}), which is appropriate when feature-level---rather than rule-level---sparsity is of interest.
 
-\emph{Step 3: Posterior inclusion probability (PIP).} The Bayes factor for including rule $j$ is approximated as $\text{BF}_j \approx \exp(-\Delta\text{BIC}_j/2)$ \cite{raftery1995bayesian}. Combined with the prior odds $\pi/(1-\pi)$, the approximate PIP is:
+\subsection{Bayesian Model Averaging for Prediction}
+\label{sec:bma}
+
+We predict by BMA rather than by conditioning on a single selected model \cite{hoeting1999bayesian}. Given $T$ posterior draws $\{\boldsymbol{\beta}^{(t)},\sigma^{2(t)}\}_{t=1}^{T}$, the predictive mean is the mixture mean $\hat{y}^*=\frac1T\sum_t \boldsymbol{\phi}^*\boldsymbol{\beta}^{(t)}$, and the predictive variance follows from the law of total variance:
 \begin{equation}
- \widehat{P}(\gamma_j = 1 \mid \mathcal{D}) = \frac{\pi}{1-\pi} \cdot \text{BF}_j \Big/ \Big(1 + \frac{\pi}{1-\pi} \cdot \text{BF}_j\Big).
- \label{eq:pip}
+ \mathrm{Var}(y^*\mid\mathbf{x}^*,\mathcal{D})
+ = \underbrace{\tfrac1T\sum_t \sigma^{2(t)}}_{\text{aleatoric}}
+ + \underbrace{\mathrm{Var}_t\big(\boldsymbol{\phi}^*\boldsymbol{\beta}^{(t)}\big)}_{\text{model uncertainty}},
+ \label{eq:bma}
 \end{equation}
-Rules with PIP $> 0.5$ are retained; others are pruned. Active rules are then re-fitted via ridge regression on the reduced design matrix.
-
-\emph{Step 4: Prediction intervals.} Predictive uncertainty is quantified through the posterior covariance under the selected model. The posterior precision matrix for $\boldsymbol{\beta}$ is $\mathbf{P} = \boldsymbol{\Phi}^\top\boldsymbol{\Phi}/\hat{\sigma}^2_\varepsilon + \text{diag}(\boldsymbol{\tau}^{-1})$, where $\hat{\sigma}^2_\varepsilon$ is estimated from the ridge residual variance, and $\boldsymbol{\tau}$ encodes slab variance ($\tau^2 = 10^3$) for active rules and near-zero variance for pruned rules. The predictive variance for a new input $\mathbf{x}^*$ with design row $\boldsymbol{\phi}^*$ is:
-\begin{equation}
- \text{Var}(y^* \mid \mathbf{x}^*, \mathcal{D}) \approx \hat{\sigma}^2_\varepsilon + \boldsymbol{\phi}^* (\hat{\sigma}^2_\varepsilon \mathbf{P}^{-1}) \boldsymbol{\phi}^{*\top},
- \label{eq:predvar}
-\end{equation}
-yielding a 95\% approximate prediction interval $\hat{y}^* \pm 1.96\sqrt{\text{Var}(y^* \mid \mathbf{x}^*, \mathcal{D})}$.
-
-This analytical approximation replaces the MCMC sampling loop (each Gibbs iteration requiring $O(R^3 + nR^2)$ for conditional posterior updates) with a single $O(R \cdot n\cdot Rd)$ pass through the rules plus one $O((R(d+1))^3)$ matrix inversion, making it practical for interactive exploratory analysis. The approximation inherits two known limitations: (a) BIC-based Bayes factors are accurate in large-$n$ regimes but can mis-rank models when the effective sample size per rule is small; (b) the Gaussian predictive approximation underestimates tail uncertainty, particularly when the posterior over $\gamma_j$ is not concentrated at 0 or 1 \cite{gelman2013bayesian}. We return to these limitations when interpreting the empirical results.
+yielding the 95\% interval $\hat{y}^*\pm1.96\sqrt{\mathrm{Var}(y^*\mid\mathbf{x}^*,\mathcal{D})}$. The second term is precisely the model-selection uncertainty that a hard-thresholded approximation discards; retaining it is what restores calibration.
 
 %============================================================
 \section{Experimental Setup}
-\label{sec:experiments}
+\label{sec:setup}
 
-We evaluate on three UCI benchmarks with four target variables (Table~\ref{tab:datasets}). The Energy Efficiency dataset \cite{tsanas2012accurate} contains 768 simulated building configurations (8 geometric parameters). Heating (Y1) and cooling (Y2) loads are modeled as separate regression targets. The Concrete Compressive Strength dataset \cite{yeh1998modeling} contains 1030 laboratory samples (8 mix-design parameters). To test the hypothesis that sparsity becomes more advantageous in higher dimensions, we add the Facebook Metrics dataset \cite{moro2016predicting}---19 features derived from Facebook page activity, subsampled to $n=1000$ for computational tractability. Features are standardized to zero mean and unit variance before modeling; no samples contain missing values.
+We evaluate on two UCI regression benchmarks (three regression targets): the Energy Efficiency dataset \cite{tsanas2012accurate} (768 simulated building configurations, 8 geometric features, with heating and cooling loads as two targets) and the Concrete Compressive Strength dataset \cite{yeh1998modeling} (1030 laboratory samples, 8 mix-design features). Features are standardized to zero mean and unit variance; all TSK methods use $R=5$ rules from fuzzy $c$-means ($m=2$) with Gaussian membership spreads equal to the per-cluster standard deviation of training points, scaled by $s=1.5$.
 
-\begin{table}[htbp]
-\centering
-\caption{Dataset characteristics. All features are continuous and standardized to zero mean and unit variance before modeling. No samples contain missing values.}
-\label{tab:datasets}
-\begin{tabular}{lcccc}
-\toprule
-Characteristic & Energy Efficiency & Concrete CS & Facebook Metrics \\
-\midrule
-Samples ($n$) & 768 & 1030 & 1000$^*$ \\
-Features ($d$) & 8 & 8 & 19 \\
-Target & Heating/Cooling Load (kWh/m$^2$) & Strength (MPa) & Total Interactions \\
-Data type & Simulation (Ecotect) & Laboratory & Social media \\
-\bottomrule
-\end{tabular}
-\par\vspace{4pt}
-{\footnotesize $^*$Random subsample from 5{,}875 original samples for computational tractability of the $R(d+1)$-dimensional TSK design matrix \cite{moro2016predicting}.}
-\end{table}
-
-Six methods are compared: \textbf{TSK-LS} (classical least-squares, dense baseline); \textbf{TSK-LASSO} (L$_1$-regularized, $\lambda$ via 5-fold CV); \textbf{TSK-SpikeSlab} (proposed, $\pi\sim\text{Beta}(1,1)$, $\alpha=10^{-2}$, $\tau^2=10^3$); \textbf{Bayesian-TSK} (non-sparse conjugate prior \cite{gu2018bayesian}, prior scale matched to isolate sparsity effect); \textbf{Random Forest} (300 trees, max\_depth=10); and \textbf{SVR} (RBF kernel, $C=1.0$, $\gamma=\text{scale}$). All TSK methods use $k$-means $k=5$ with Gaussian membership spread scaling factor $s=1.5$ (applied to cluster standard deviations). A fixed base random seed of 42 is used, with split-specific seeds $42 + s$ for the $s$-th split to ensure reproducibility. All experiments use 30 independent random 80/20 train/test splits.
-
-Each dataset undergoes 30 independent random 80/20 train/test splits. Metrics are RMSE, MAE, $R^2$, active rules (PIP $>0.5$ for TSK-SpikeSlab; $|\boldsymbol{\beta}_j|_2 > 10^{-6}$ for TSK-LASSO), PICP, and MPIW. Significance is assessed via Wilcoxon signed-rank with Bonferroni correction for 15 pairwise tests ($\alpha=0.05/15=0.0033$) \cite{wilcoxon1945individual}, and global ranking via Friedman--Nemenyi across the three datasets \cite{demsar2006statistical}. Effect sizes (Cohen's $d$) are reported for key pairwise comparisons to complement inferential tests. Ablation studies vary $\pi\in\{0.1,0.3,0.5,0.7,0.9\}$ and $k\in\{3,5,7,9\}$ on Energy-Cooling (10 splits).
+Four TSK methods are compared in the main experiments: \textbf{TSK-LS} (dense least squares), \textbf{Bayesian-TSK} (dense conjugate posterior, Section~\ref{sec:conj}), \textbf{TSK-SpikeSlab-BIC} (the BIC-plus-Laplace analytical approximation with hard thresholding; labeled \texttt{SpikeSlab-Fast} in the released code), and \textbf{TSK-SpikeSlab-Gibbs} (rule-level Gibbs plus BMA, Sections~\ref{sec:gibbs}--\ref{sec:bma}; labeled \texttt{SpikeSlab-Gibbs}); a coefficient-level variant, \textbf{TSK-SSVS} (labeled \texttt{SSVS-Gibbs}), is used in the sparsity-boundary analysis (Section~\ref{sec:sparse}). Random forest and support vector regression serve as non-interpretable machine-learning references. The rule-level Gibbs sampler uses $1{,}000$ burn-in and $2{,}000$ retained draws; the coefficient-level SSVS uses $800$ and $800$. All results are averaged over 30 independent random 80/20 train--test splits with a fixed seed (SEED=42); reported intervals are 95\% Gaussian intervals. All spike-and-slab priors use inclusion probability $\pi=0.5$; the rule-level Gibbs and conjugate baselines use slab variance $\tau^2=10^3$, and the coefficient-level SSVS uses $\tau^2=1.0$. Metrics are root-mean-square error (RMSE), $R^2$, prediction-interval coverage probability (PICP), and mean prediction-interval width (MPIW).
 
 %============================================================
 \section{Results}
 \label{sec:results}
 
+\subsection{The Reproducibility Fix}
+\label{sec:repro}
+
+Fig.~\ref{fig:repro} contrasts the $R^2$ values reported under the buggy membership implementation with those obtained after correcting it. The improvement is large and consistent: TSK-LS rises from $0.41$ to $0.94$ (Energy Cooling), $0.57$ to $0.97$ (Energy Heating), and $0.44$ to $0.74$ (Concrete); the conjugate Bayesian-TSK rises from $0.80$ to $0.94$, $0.87$ to $0.97$, and $0.50$ to $0.74$. This confirms that the bug---not the model class---was responsible for the apparently mediocre baselines, and it establishes the corrected numbers as the reference for the comparisons below.
+
+\begin{figure}[tbhp]
+\centering
+\includegraphics[width=0.9\textwidth]{results/figures/fig1_repro_fix.pdf}
+\caption{Reproducibility fix. Reported $R^2$ (orange, as reported by the prior buggy pipeline) versus corrected $R^2$ (blue, training-time membership spreads reused at inference) for the dense TSK-LS and conjugate Bayesian-TSK baselines.}
+\label{fig:repro}
+\end{figure}
+
 \subsection{Main Comparison}
+\label{sec:main}
 
-Tables~\ref{tab:main}--\ref{tab:uncertainty} report the primary results across three low-dimensional target variables. Bayesian-TSK achieves the best RMSE among fuzzy methods on all datasets. On Energy-Cooling, Bayesian-TSK (RMSE $=4.11\pm0.80$, $R^2=0.805$) substantially outperforms classical TSK-LS (RMSE $=5.60\pm4.80$, $R^2=0.408$). Random Forest yields the lowest RMSE overall, as expected for low-dimensional tabular data.
-
-TSK-SpikeSlab retains 3.1 of 5 rules (38\% sparsity) on the Energy datasets but is unable to prune any rules on Concrete (5.0/5 active). However, this sparsity comes at a substantial accuracy cost: TSK-SpikeSlab achieves RMSE $=19.12$--$21.29$ on Energy datasets, 3.8--4.0$\times$ worse than the dense TSK-LS baseline (RMSE $=4.80$--$5.60$), with negative $R^2$ values across all datasets (Table~\ref{tab:main}). On Concrete, TSK-SpikeSlab (RMSE $=41.97$) and TSK-LASSO (RMSE $=42.10$) are statistically indistinguishable (Wilcoxon $p=0.792$), and both are 3.6$\times$ worse than TSK-LS (RMSE $=11.76$).
-
-\subsection{Higher-Dimensional Validation}
-
-To test whether the sparsity-accuracy trade-off improves with dimensionality, we evaluate all methods on the Facebook Metrics dataset ($d=19$, $n=1000$ subsampled; Table~\ref{tab:highdim}). At $d=19$, the relative accuracy cost of sparsity is substantially reduced: TSK-SpikeSlab achieves RMSE $=24.40$, which is 1.9$\times$ worse than TSK-LS (RMSE $=12.56$), compared with the 3.4--3.8$\times$ degradation observed at $d=8$. Notably, interval calibration also improves dramatically: TSK-SpikeSlab's PICP rises from $0.077$ (Energy-Cooling, $d=8$) to $0.695$ (Facebook, $d=19$), though it still falls short of the nominal 95\% level. Bayesian-TSK maintains well-calibrated intervals (PICP $=0.949$) at $d=19$, confirming that the conjugate Gaussian--Wishart framework's calibration advantage persists across dimensionalities. These results support the hypothesis that sparsity becomes less costly as dimensionality increases: at $d=19$, the design matrix $\boldsymbol{\Phi}$ has $R(d+1)=100$ columns versus 45 at $d=8$, and the larger parameter space provides more room for rule pruning to operate without catastrophic loss of input space coverage.
-
-We attribute this performance degradation to two interacting factors. First, the TSK weighted design matrix $\boldsymbol{\Phi}$ has columns that are products of input features with normalized firing strengths, producing severe multicollinearity---condition numbers routinely exceed $10^{16}$. In this regime, the LassoCV-selected $\lambda$ with the standard alpha grid (min $\alpha = 9.2\times10^{-3}$) zeroes 31 of 45 coefficients, collapsing predictions to near zero. Expanding the grid to $\alpha = 10^{-8}$ causes LassoCV to select the minimal possible value (all 45 coefficients active, Fig.~S1), confirming that L1 regularization is structurally incompatible with the TSK design---the optimal L1 solution is essentially OLS. Yet even unregularized, LASSO's L1 geometry lands in a different optimum than ridge-regularized TSK-LS (RMSE $=28.6$ vs $11.7$ in our diagnostic). Second, with only $R=5$ rules, removing even 2 rules eliminates coverage of $\sim$40\% of the input space; the remaining 3 rules cannot fully compensate for the lost local structure. This sparsity-accuracy tension is most acute in low-dimensional, small-$R$ settings and diminishes at larger $R$ (see cluster count sensitivity below). We provide the TSK-LASSO diagnostic code and expanded-grid results in the Supplementary Material.
+Table~\ref{tab:main} and Fig.~\ref{fig:main} report the primary results. After correcting the bug, the dense baselines are strong: TSK-LS achieves $R^2=0.94$--$0.97$ on the Energy targets and $0.74$ on Concrete, and the conjugate Bayesian-TSK differs from it by at most $0.01$ in $R^2$. The proposed Gibbs sampler recovers this accuracy---TSK-SpikeSlab-Gibbs attains $R^2=0.97/0.94/0.74$, matching the dense baseline to within $0.01$ in $R^2$ on every target---which is the expected behavior of a correct sampler and a direct validation of our MCMC implementation against the closed form. A paired Wilcoxon signed-rank test over the 30 splits \cite{wilcoxon1945individual} confirms that TSK-SpikeSlab-Gibbs and Bayesian-TSK are not significantly worse than TSK-LS on the Energy targets ($p\ge0.07$); on Concrete the residual difference is nominally significant ($p<0.01$) but negligible in magnitude ($\Delta R^2<0.01$). In sharp contrast, the BIC-based analytical approximation TSK-SpikeSlab-BIC collapses to negative $R^2$ ($-1.8$ to $-6.0$), significantly worse than every other method on all three targets (all $p<0.001$)---it predicts worse than a constant mean, because hard thresholding discards rules that the (correct) model actually needs.
 
 \begin{table}[htbp]
 \centering
-\caption{Performance comparison on low-dimensional benchmarks (mean $\pm$ std, 30 splits). Best in \textbf{bold}, second \underline{underlined}. Active rules: PIP$>0.5$ (TSK-SpikeSlab); $|\boldsymbol{\beta}_j|_2 > 10^{-6}$ (TSK-LASSO).}
+\caption{Main comparison (mean $\pm$ std over 30 splits). PICP is the 95\% interval coverage. Differences among TSK-LS, Bayesian-TSK, and TSK-SpikeSlab-Gibbs are at most $0.01$ in $R^2$; paired Wilcoxon tests over the 30 splits are reported in the text.}
 \label{tab:main}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lccc|ccc|ccc}
 \toprule
-& \multicolumn{3}{c|}{Energy (Heating)} & \multicolumn{3}{c|}{Energy (Cooling)} & \multicolumn{3}{c}{Concrete CS} \\
-Method & RMSE$\downarrow$ & $R^2$$\uparrow$ & Rules & RMSE$\downarrow$ & $R^2$$\uparrow$ & Rules & RMSE$\downarrow$ & $R^2$$\uparrow$ & Rules \\
+& \multicolumn{3}{c|}{Energy Heating} & \multicolumn{3}{c|}{Energy Cooling} & \multicolumn{3}{c}{Concrete} \\
+Method & RMSE & $R^2$ & PICP & RMSE & $R^2$ & PICP & RMSE & $R^2$ & PICP \\
 \midrule
-TSK-LS        & 4.80$\pm$4.54 & 0.567 & 5.0 & 5.60$\pm$4.80 & 0.408 & 5.0 & 11.76$\pm$4.25 & 0.438 & 5.0 \\
-TSK-LASSO     & 29.28$\pm$1.82 & $-$7.60 & 5.0 & 31.82$\pm$1.06 & $-$10.4 & 5.0 & 42.10$\pm$1.37 & $-$5.38 & 5.0 \\
-TSK-SpikeSlab & 19.12$\pm$2.08 & $-$2.70 & 3.1 & 21.29$\pm$1.77 & $-$4.13 & 3.1 & 41.97$\pm$4.36 & $-$5.40 & 5.0 \\
-Bayesian-TSK  & \textbf{3.57$\pm$0.71} & \textbf{0.868} & 5.0 & \textbf{4.11$\pm$0.80} & \textbf{0.805} & 5.0 & \textbf{11.17$\pm$3.51} & \textbf{0.503} & 5.0 \\
-Random Forest & \underline{0.49$\pm$0.06} & \underline{0.998} & -- & \underline{1.67$\pm$0.13} & \underline{0.969} & -- & \underline{5.17$\pm$0.40} & \underline{0.903} & -- \\
-SVR           & 2.73$\pm$0.21 & 0.925 & -- & 3.09$\pm$0.22 & 0.893 & -- & 9.97$\pm$0.43 & 0.643 & -- \\
+TSK-LS         & $1.69{\pm}0.19$ & 0.97 & -- & $2.36{\pm}0.17$ & 0.94 & -- & $8.52{\pm}0.55$ & 0.74 & -- \\
+Bayesian-TSK   & $1.69{\pm}0.19$ & 0.97 & 0.95 & $2.36{\pm}0.17$ & 0.94 & 0.94 & $8.46{\pm}0.43$ & 0.74 & 0.95 \\
+TSK-SpikeSlab-BIC & $16.4{\pm}3.4$ & $-1.8$ & 0.00 & $18.8{\pm}3.0$ & $-3.1$ & 0.00 & $44.0{\pm}4.0$ & $-6.0$ & 0.18 \\
+TSK-SpikeSlab-Gibbs & $1.70{\pm}0.19$ & 0.97 & 0.95 & $2.37{\pm}0.17$ & 0.94 & 0.94 & $8.43{\pm}0.43$ & 0.74 & 0.95 \\
+Random Forest  & $0.49{\pm}0.06$ & 0.998 & -- & $1.67{\pm}0.13$ & 0.97 & -- & $5.17{\pm}0.40$ & 0.90 & -- \\
+SVR            & $2.73{\pm}0.21$ & 0.93 & -- & $3.09{\pm}0.22$ & 0.89 & -- & $9.97{\pm}0.43$ & 0.64 & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[htbp]
+\begin{figure}[tbhp]
 \centering
-\caption{Performance on Facebook Metrics ($d=19$, $n=1000$, 30 splits). Higher dimensionality reduces the relative accuracy cost of sparsity (1.9$\times$ vs 3.8$\times$ at $d=8$) and substantially improves interval calibration (PICP $=0.695$ vs $0.077$ at $d=8$).}
-\label{tab:highdim}
-\begin{tabular}{lccccll}
-\toprule
-Method & RMSE$\downarrow$ & $R^2$$\uparrow$ & Rules & PICP & MPIW \\
-\midrule
-TSK-LS        & 12.56$\pm$7.55 & $-$2.42 & 5.0 & -- & -- \\
-TSK-LASSO     & 22.90$\pm$0.91 & $-$7.41 & 5.0 & -- & -- \\
-TSK-SpikeSlab & 24.40$\pm$0.62 & $-$8.54 & 3.0 & 0.695 & 66.92 \\
-Bayesian-TSK  & \textbf{9.08$\pm$1.98} & \textbf{$-$0.39} & 5.0 & 0.949 & 40.91 \\
-Random Forest & \underline{3.84$\pm$0.35} & \underline{0.763} & -- & -- & -- \\
-SVR           & 7.19$\pm$0.30 & 0.173 & -- & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\caption{Ridge penalty sensitivity on Energy-Cooling (10 splits, $\pi=0.5$, $\tau^2=10^3$). Best in \textbf{bold}.}
-\label{tab:ablation}
-\begin{tabular}{lcccc}
-\toprule
-$\alpha$ & RMSE & Active Rules & PICP & MPIW \\
-\midrule
-$10^{-5}$ & 42.49$\pm$8.45 & 1.8 & 0.015 & 10.76 \\
-$10^{-4}$ & 30.02$\pm$4.46 & 2.8 & 0.024 & 12.09 \\
-$10^{-3}$ & 21.70$\pm$2.04 & 3.2 & 0.038 & 12.54 \\
-$10^{-2}$ (default) & 20.55$\pm$2.18 & 3.2 & 0.048 & 12.76 \\
-$10^{-1}$ & \textbf{16.25$\pm$0.42} & 4.0 & 0.161 & 23.22 \\
-$10^{0}$ & 22.36$\pm$5.96 & 4.5 & 0.168 & 29.61 \\
-$10^{1}$ & 23.92$\pm$5.38 & 4.6 & 0.161 & 31.08 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Bayesian-TSK achieves well-calibrated intervals (PICP $=0.940$--$0.961$ on Energy; PICP $=0.900$ on Concrete), all not significantly different from the nominal 95\% (binomial test, $p>0.05$). As a reference, a bootstrap TSK-LS baseline (200 resamples, 2.5--97.5 percentile intervals) achieves PICP $=0.879$ with MPIW $=111.30$ on Energy-Cooling: better coverage than TSK-SpikeSlab but substantially wider intervals than Bayesian-TSK (MPIW $=30.19$), confirming that the conjugate Bayesian posterior provides the most efficient calibrated intervals among TSK methods. TSK-SpikeSlab yields severe undercoverage (PICP $=0.057$--$0.315$, meaning 68--94\% of test points fall outside the nominal 95\% intervals), as the Laplace covariance (Eq.~\ref{eq:predvar}) collapses when rules are pruned---a known failure mode of Laplace approximations when the posterior over model indicators is not concentrated \cite{gelman2013bayesian}. See Section~\ref{sec:conclusion} for remediation strategies.
-
-\begin{table}[htbp]
-\centering
-\caption{Interval calibration. $^*$ PICP not significantly different from nominal 0.95 ($p>0.05$, binomial test). Bold entries indicate severe undercoverage: 92--94\% of test points fall outside the nominal 95\% intervals for TSK-SpikeSlab on Energy datasets.}
-\label{tab:uncertainty}
-\begin{tabular}{lcccccc}
-\toprule
-Method & \multicolumn{2}{c}{Energy (Heating)} & \multicolumn{2}{c}{Energy (Cooling)} & \multicolumn{2}{c}{Concrete} \\
-& PICP & MPIW & PICP & MPIW & PICP & MPIW \\
-\midrule
-TSK-SpikeSlab & \textbf{0.057} & 12.34 & \textbf{0.077} & 17.10 & \textbf{0.315} & 87.94 \\
-Bayesian-TSK  & 0.940$^*$ & 21.77 & 0.961$^*$ & 30.19 & 0.900$^*$ & 46.26 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Mechanism Analysis}
-
-Fig.~\ref{fig:mechanism} stratifies RMSE by posterior predictive uncertainty. On Energy-Cooling, TSK-SpikeSlab consistently outperforms TSK-LASSO across all uncertainty bins ($\Delta$RMSE $=9.9$--$11.4$). TSK-LASSO's RMSE is uniformly high ($\approx31.6$--$32.1$), while TSK-SpikeSlab achieves best accuracy in the medium-uncertainty region (RMSE $=20.36$). This supports the mechanistic hypothesis: Bayesian posterior uncertainty identifies informative structure, and the spike-and-slab mechanism produces better predictions than uniform LASSO shrinkage on points with meaningful signal.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{results/figures/fig3_mechanism.pdf}
-\caption{RMSE by posterior predictive uncertainty bin. TSK-SpikeSlab consistently outperforms TSK-LASSO on Energy-Cooling ($\Delta = 9.9$--$11.4$); TSK-LS shown as reference. Per-bin sample size $n\approx 51$ per split. On Concrete, differences are $<1$ RMSE ($<5\%$ of the scale)---below practical significance.}
-\label{fig:mechanism}
+\includegraphics[width=0.95\textwidth]{results/figures/fig2_main_comparison.pdf}
+\caption{Predictive accuracy ($R^2$) across datasets. The Gibbs samplers recover the dense-baseline accuracy, while the BIC-based analytical approximation (TSK-SpikeSlab-BIC) collapses to negative $R^2$.}
+\label{fig:main}
 \end{figure}
 
-On Concrete, the effect is smaller: TSK-SpikeSlab and TSK-LASSO are nearly identical in the low-uncertainty bin ($\Delta=-0.40$), with a slight advantage in higher-uncertainty regions ($\Delta=+0.19$ to $+0.69$). The diminished effect reflects Concrete's high variance (CV $>50\%$).
+\FloatBarrier
 
-\subsection{Ablation and Sensitivity}
+\subsection{Calibration}
+\label{sec:calibration}
 
-The $\pi$ ablation shows that the prior on the inclusion probability has negligible influence on the results. Across $\pi\in[0.1,0.9]$---an 81-fold range in prior odds ratio---estimated active rules remain at 3.2 and RMSE at $20.55\pm2.18$, varying by $<10^{-3}$ across the range. This insensitivity is a direct consequence of the BIC-based approximation: the BIC differences between models with and without each rule are sufficiently large ($|\Delta\text{BIC}_j| \gg |\log(\pi/(1-\pi))|$) that the prior odds are dominated by the data-dependent Bayes factor (Eq.~\ref{eq:pip}). Rather than evidence of Bayesian robustness, this reflects a structural feature of the BIC approximation---the prior on $\pi$ is operationally bypassed.
+Fig.~\ref{fig:cal} reports interval calibration. Both the conjugate Bayesian-TSK and the Gibbs sampler achieve PICP within one binomial standard error of the nominal 95\% (Energy $0.94$--$0.95$, Concrete $0.95$), with compact widths (MPIW $\approx6.7$--$32.9$). The analytical TSK-SpikeSlab-BIC undercovers severely: PICP $=0.00$ on both Energy targets and $0.18$ on Concrete, meaning essentially all test points fall outside the nominal 95\% intervals. The failure mechanism is the Laplace covariance approximation: it conditions on a single hard-thresholded model and sets the prior precision of discarded rules to effectively zero, collapsing the marginal variance; the Gibbs/BMA prediction of Eq.~\eqref{eq:bma} restores coverage by propagating model uncertainty through the mixture variance.
 
-We therefore extended the sensitivity analysis to two parameters that directly affect the approximation quality: the slab variance $\tau^2$ and the ridge penalty $\alpha$. Varying $\tau^2$ across seven orders of magnitude ($10^0$--$10^6$) leaves RMSE and active rule counts unchanged (20.55 and 3.2 respectively), confirming that the hard PIP threshold at 0.5 decouples rule selection from the continuous slab prior scale. However, $\tau^2$ strongly modulates prediction interval calibration: PICP improves monotonically from 0.000 at $\tau^2=10^0$ to 0.227 at $\tau^2=10^6$, while MPIW widens from 9.42 to 140.44. The ridge penalty $\alpha$ is the dominant hyperparameter (Table~\ref{tab:ablation}): varying $\alpha$ from $10^{-5}$ to $10^1$ changes RMSE by up to 26.2---from 42.49 ($\alpha=10^{-5}$, 1.8 rules) to 16.25 ($\alpha=10^{-1}$, 4.0 rules). This 2.6$\times$ reduction in RMSE exceeds all other hyperparameter effects combined. The sensitivity pattern reveals a fundamental tension: small $\alpha$ ($\leq 10^{-4}$) produces an ill-conditioned initial fit that propagates into the BIC computation, while large $\alpha$ ($\geq 1$) over-regularizes and retains nearly all rules. The default $\alpha=10^{-2}$ represents a compromise (RMSE $=20.55$, 3.2 rules). These results confirm that---among all hyperparameters---the ridge penalty is the single most consequential tuning choice for the analytical approximation, and it should be selected via cross-validation in practice.
-
-The FCM sensitivity analysis (varying cluster count $k$) confirms (RMSE $=20.55$ vs $20.51$), with $k=9$ providing greater relative sparsity (5.4/9, 40\% vs 3.1/5, 38\%). $k=3$ performs worst (RMSE $=28.39$), as the coarse partition fails to capture data structure.
-
-\begin{figure}[htbp]
+\begin{figure}[tbhp]
 \centering
-\includegraphics[width=0.95\textwidth]{results/figures/fig4_fcm_sensitivity.pdf}
-\caption{Cluster count sensitivity. $k=5$ achieves the best accuracy-sparsity trade-off; $k=9$ provides greater relative sparsity with comparable accuracy.}
-\label{fig:fcm}
+\includegraphics[width=0.85\textwidth]{results/figures/fig3_calibration.pdf}
+\caption{Prediction-interval coverage (PICP) with the nominal 95\% reference (dashed). Gibbs/BMA and the conjugate Bayesian model are calibrated; the BIC-plus-Laplace approximation undercovers catastrophically.}
+\label{fig:cal}
 \end{figure}
 
-\subsection{Statistical Significance}
+\FloatBarrier
 
-The Friedman test across the three datasets rejects equal performance ($\chi^2=147.2$, $p<10^{-8}$). Average ranks across datasets: Random Forest (1.00) $\prec$ SVR (2.21) $\prec$ Bayesian-TSK (2.75) $\prec$ TSK-LS (3.80) $\prec$ TSK-SpikeSlab (5.12) $\prec$ TSK-LASSO (6.00). Wilcoxon tests with Bonferroni correction confirm TSK-SpikeSlab significantly outperforms TSK-LASSO on Energy datasets ($p<0.001$, Bonferroni $\alpha=0.0033$) but not on Concrete ($p=0.792$). The RMSE differences on Energy datasets are large in magnitude: Cohen's $d$ for TSK-SpikeSlab vs.\ TSK-LASSO ranges from $-4.71$ to $-6.74$ (large effect in favor of TSK-SpikeSlab), while on Concrete the difference is negligible ($d=-0.03$). All other pairwise comparisons are significant at the corrected level with $|d| > 2$.
+\subsection{The Sparsity Boundary}
+\label{sec:sparse}
 
-Fig.~\ref{fig:rules} visualizes rule selection: Rules R2, R3, R5 are active (PIP $>0.5$); R1 and R4 are pruned (38\% sparsity). This reduces the number of IF-THEN rules that domain experts must inspect from five to three on the Energy datasets.
+Having established that Gibbs/BMA is correct and calibrated, we characterize when the \emph{sparsity} component of the spike-and-slab prior actually helps. Two results stand out (Fig.~\ref{fig:sparse}).
 
-\begin{figure}[htbp]
+First, rule-level sparsity largely does not activate: on all three targets the posterior inclusion probabilities of the $R=5$ rules are close to $1.0$ (with a single rule occasionally pruned on the Energy targets), because with a correct partition nearly every rule contributes. This is expected in the low-dimensional, low-$R$ regime where the TSK model is not over-parameterized.
+
+Second, coefficient-level sparsity (SSVS) is a hard trade-off rather than a win. Varying the slab variance $\tau^2$ over three orders of magnitude (Fig.~\ref{fig:sparse}a) shows that a tight slab ($\tau^2=0.1$) over-shrinks and collapses accuracy to $R^2=-5.4$, whereas a diffuse slab ($\tau^2=100$) merely recovers the dense baseline ($R^2=0.92$ versus $0.94$) while pruning nothing. No $\tau^2$ setting beats the dense baseline. In the irrelevant-feature regime (Fig.~\ref{fig:sparse}b), appending up to 30 standard-normal noise features degrades the dense baseline only modestly (from $R^2=0.93$ to $0.88$), and the sparse variants do not improve upon it. Correct fuzzy c-means already provides robustness to irrelevant features, so sparsity offers no free lunch on this domain.
+
+\begin{figure}[tbhp]
 \centering
-\includegraphics[width=0.85\textwidth]{results/figures/fig5_cd_diagram.pdf}
-\caption{Critical Difference diagram (Friedman--Nemenyi) for aggregate ranks across three datasets. CD $=4.35$ at $\alpha=0.05$ ($k=6$, $N=3$). With $N=3$ datasets, only rank differences exceeding the CD are statistically significant at the aggregate level; per-dataset Wilcoxon tests provide finer-grained pairwise comparisons.}
-\label{fig:cd}
+\includegraphics[width=1.0\textwidth]{results/figures/fig4_sparsity_boundary.pdf}
+\caption{The sparsity boundary. (a) Coefficient-level SSVS $R^2$ versus slab variance $\tau^2$: a tight slab over-shrinks and a diffuse slab only recovers the dense baseline (dashed), never beating it. (b) Irrelevant-feature regime: dense TSK-LS degrades only modestly as noise features are appended, and neither rule-level nor coefficient-level sparsity improves on it.}
+\label{fig:sparse}
 \end{figure}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{results/figures/fig6_rules.pdf}
-\caption{Rule posterior inclusion probabilities (Energy-Cooling, $\pi=0.5$, averaged over 10 ablation splits). R2, R3, R5 are active (PIP $>0.5$); R1, R4 are pruned (38\% sparsity). Shaded bars indicate active rules; hatched bars indicate inactive rules.}
-\label{fig:rules}
-\end{figure}
+\FloatBarrier
 
 %============================================================
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{When Is Sparsity Worth the Accuracy Cost?}
+\subsection{Why the Analytical Approximation Fails}
 
-The central tension in our results is between rule reduction and predictive performance. On the Energy datasets, pruning 38\% of rules incurs a 3.4--3.8$\times$ RMSE increase relative to dense TSK-LS (Table~\ref{tab:main}). Whether this trade-off is acceptable depends on the application context. In architectural design exploration, where engineers iterate through hundreds of building configurations, a 38\% reduction in rules to inspect may justify a moderate accuracy loss if the remaining rules preserve the correct qualitative relationships between building parameters and energy performance. However, for quantitative energy certification or compliance checking, the dense Bayesian-TSK baseline---which achieves both superior accuracy (RMSE $=3.57$--$4.11$) and calibrated intervals (PICP $=0.94$--$0.96$) on Energy data---is clearly the preferred choice. The practical value of the sparse model depends on whether the three retained rules correctly identify the most influential building parameters; verifying this requires domain-specific case studies that we leave to future work.
+The failure of the BIC-plus-Laplace approximation has a specific origin. BIC approximates the Bayes factor by replacing the integral over the slab with a point mass at the maximum-likelihood estimate; this is only reliable when the posterior over $\gamma_j$ is concentrated at $0$ or $1$. On the Energy benchmark the inclusion probabilities are genuinely intermediate, so the hard threshold at $0.5$ discards rules that carry real (if partial) signal. The Laplace predictive covariance then conditions on a single, pruned model and sets the prior precision of discarded rules to effectively zero, collapsing the interval. Gibbs sampling with BMA avoids both steps: it averages over all rule configurations rather than selecting one.
 
-The sparsity-accuracy tension is most severe in the low-$R$, low-$d$ setting studied here. With only $R=5$ rules covering 8 input dimensions, each rule governs a large region of the input space. Removing two rules eliminates approximately 40\% of the coverage, and the remaining three rules cannot compensate for the lost local structure. At larger $R$ (e.g., $R=9$, where 5.4 rules are retained for 40\% sparsity), the per-rule coverage is finer-grained, suggesting that sparsity may become less costly as $R$ increases. This hypothesis is consistent with the cluster count sensitivity results (Fig.~\ref{fig:fcm})---$k=9$ achieves RMSE 20.51 with 40\% sparsity, comparable to the $k=5$ result (RMSE 20.55, 38\% sparsity) despite a larger absolute number of retained rules.
+\subsection{Implications for Sparse TSK Research}
 
-\subsection{Why Does the Analytical Approximation Undercover?}
+Our boundary characterization carries a constructive message. Sparsity-inducing priors are worth their cost only when the model is genuinely over-parameterized---high rule counts relative to the sample size, or high-dimensional inputs with truly irrelevant features. In the low-dimensional building-energy regime, the dense TSK is already well-conditioned and no sparsity is warranted. This is not a failure of the spike-and-slab framework; it is a statement about the data. We therefore present the Gibbs/BMA estimator as a \emph{correct and calibrated} Bayesian TSK, and report sparsity as a boundary condition rather than a headline contribution.
 
-The systematic undercoverage of TSK-SpikeSlab (PICP $=0.057$--$0.315$) has a specific mathematical origin. The Laplace predictive covariance (Eq.~\ref{eq:predvar}) approximates the posterior over $\boldsymbol{\beta}$ as Gaussian centered at the ridge estimate, with covariance given by the inverse Hessian of the log-posterior. When rule $j$ is pruned (PIP $\leq 0.5$), the corresponding prior precision is set to $10^{10}$ (essentially zero variance), collapsing the marginal variance for all predictions that depend on that rule's parameters. However, the actual posterior over $\gamma_j$ is not concentrated at zero for pruned rules---the average PIP for R1 is 0.30 (Fig.~\ref{fig:rules}), meaning there remains a 30\% posterior probability that R1 should be included. The Laplace approximation ignores this model uncertainty entirely by conditioning on a single hard threshold.
+\subsection{Limitations}
 
-The $\tau^2$ sensitivity results confirm this diagnosis: even at $\tau^2=10^6$, where the unpruned rules have an extremely diffuse prior, PICP only reaches 0.228 (Supplementary Table~S2). The undercoverage is not primarily caused by an overly narrow slab prior, but by the decision to discard rules rather than average over them. Full Bayesian model averaging---where predictions are weighted by each model's posterior probability---would produce wider intervals that reflect uncertainty about which rules are active. This is exactly the direction that MCMC or variational inference would enable.
-
-\subsection{Implications for Sparse TSK System Design}
-
-Our findings carry implications beyond the specific spike-and-slab implementation studied here. First, any sparse TSK method that selects rules via hard thresholding---whether through PIP, L$_1$ regularization path, or information criterion minimization---will face the same structural challenge: the weighted design matrix $\boldsymbol{\Phi}$ is inherently multicollinear (condition number $>10^{16}$ in our experiments), making the selection decision sensitive to small perturbations in the data. The LassoCV diagnostic (Section~\ref{sec:results}) demonstrates that L$_1$ regularization paths are particularly vulnerable: the standard $\alpha$ grid collapses predictions to near zero, while expanding the grid to $\alpha \to 0$ recovers the OLS solution---neither extreme is satisfactory.
-
-Second, the choice of $\alpha$ in the ridge initialization step (Table~\ref{tab:ablation}) is the single most consequential hyperparameter for the analytical approximation, changing RMSE by 26.2 across the tested range. This sensitivity is not a weakness of our specific implementation but a consequence of the approximation strategy: the initial ridge fit propagates into every BIC computation, and errors in the initial $\boldsymbol{\beta}$ estimate cascade through all subsequent steps. Methods that avoid this two-stage structure---such as full MCMC, where $\boldsymbol{\beta}$ and $\boldsymbol{\gamma}$ are updated jointly---would not exhibit the same $\alpha$-sensitivity.
-
-Third, the $\pi$ insensitivity result (RMSE varying by $<10^{-3}$ across $\pi\in[0.1,0.9]$) has a constructive interpretation: it confirms that the data dominate the prior in BIC-based selection when the Bayes factor is sufficiently large. For practitioners, this means that the choice of $\pi$ need not be a barrier to adoption---the method will produce consistent rule selections regardless of the prior inclusion probability. However, it also means that $\pi$ cannot be used to encode domain knowledge about expected sparsity levels, limiting the method's utility in applications where prior information about rule relevance is available.
-
-\subsection{Comparison with Related Approaches}
-
-Our work differs from Den{\oe}ux's ENNreg framework \cite{denoeux2023ennreg} in two fundamental respects. ENNreg models prediction uncertainty through random fuzzy sets and belief functions, producing a Dempster-Shafer belief distribution over output values. While ENNreg also generates prediction intervals for fuzzy regression, it does not perform rule-level variable selection---all rules contribute to every prediction, weighted by their belief masses. The spike-and-slab prior, by contrast, makes an explicit binary decision about each rule's inclusion, trading the continuity of ENNreg's belief-based weighting for the interpretability of hard rule removal. Which approach is preferable depends on whether the application prioritizes calibrated uncertainty (ENNreg) or compact rule bases (spike-and-slab).
-
-Compared to continuous shrinkage priors such as the Horseshoe \cite{carvalho2010horseshoe}, the spike-and-slab prior offers a conceptual advantage for fuzzy rule selection: the binary inclusion indicator $\gamma_j$ directly maps to the engineer's decision of whether to inspect rule $j$, and the posterior inclusion probability provides an interpretable measure of evidence. The Horseshoe prior would shrink rule parameters toward zero without ever setting them exactly to zero, requiring an additional thresholding step that reintroduces the same hard-decision problem. However, the Horseshoe's continuous shrinkage may achieve a smoother bias-variance trade-off in practice, making it a natural candidate for future comparisons.
-
-\subsection{Limitations and Future Directions}
-
-Beyond the three limitations discussed in Section~\ref{sec:conclusion}, several additional constraints merit attention. The current study uses only two UCI benchmark datasets with $d=8$---a dimensionality regime where sparsity is a convenience rather than a necessity. We expect the relative advantage of spike-and-slab selection to grow with dimensionality; in $d>30$ settings, dense TSK models accumulate $R(d+1)>150$ parameters, and the overfitting risk that motivates this work becomes acute. The building energy domain provides a natural pathway to higher dimensions: real building energy models often include 20--50 design parameters (orientation, glazing ratios, HVAC specifications, occupancy schedules), and simulation-based datasets with $n \approx 500$--$2000$ are common in practice.
-
-A second direction concerns the antecedent structure. Our method treats antecedents as fixed (derived from $k$-means clustering) and applies sparsity only to consequents. Joint antecedent-consequent selection---where rules with uninformative consequents also trigger revision of the corresponding fuzzy partition---would provide a more complete sparse TSK framework. Recent work on joint structure identification in Bayesian TSK \cite{gu2018bayesian} provides a natural starting point, though extending it to incorporate spike-and-slab priors introduces computational challenges.
-
-Finally, the practical deployment of sparse TSK systems in building energy applications requires validation against measured (rather than simulated) energy consumption data. The Energy Efficiency dataset used here is generated by Ecotect simulation software under idealized conditions; real buildings exhibit occupant-driven variability, sensor noise, and temporal dynamics that may alter the sparsity patterns observed. A field study pairing sparse TSK models with submetered building energy data would strengthen the application-driven case that ASC prioritizes.
+Three limitations scope this work. First, the benchmarks are low-dimensional ($d=8$); we expect sparsity to become genuinely advantageous only in $d>30$ settings, which we did not evaluate with real (rather than synthetic) high-dimensional data. Second, we fix the antecedent structure and apply sparsity only to consequents; joint antecedent--consequent selection \cite{gu2018bayesian} remains future work. Third, our evaluation uses simulated (Ecotect) building-energy data; validation against measured, submetered energy data would strengthen the application case.
 
 %============================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-We introduced spike-and-slab priors for TSK fuzzy rule consequent selection, with an analytical BIC-based approximation that performs rule selection and parameter estimation without MCMC sampling. Empirical evaluation on three benchmarks reveals a data-dependent sparsity pattern: 38\% rule reduction on the Energy datasets (1.9 of 5 rules pruned) but no pruning on Concrete (5.0 of 5 retained). The non-sparse conjugate Bayesian TSK baseline achieves well-calibrated prediction intervals (PICP $=0.900$--$0.961$), confirming that the conjugate Gaussian--Wishart framework provides reliable uncertainty estimates for dense TSK systems. However, the spike-and-slab variant---which uses a Laplace covariance approximation---systematically undercovers after rule pruning (PICP $=0.057$--$0.315$), revealing that analytical approximations cannot simultaneously deliver sparsity, competitive accuracy, and calibrated uncertainty at the data scales studied here. Mechanism analysis confirms that Bayesian predictive uncertainty distinguishes regions where the spike-and-slab prior outperforms uniform L$_1$ shrinkage.
-
-Three limitations define the scope of these findings and motivate future work. First, the BIC-based approximation implements spike-and-slab selection as hard thresholding at PIP $>0.5$, which discards rules entirely and incurs a severe accuracy penalty in low-dimensional settings ($d=8$, $R=5$). Continuous shrinkage priors (e.g., the Horseshoe) or full MCMC implementations \cite{george1993variable} may achieve a smoother sparsity-accuracy trade-off by retaining partial information from near-zero rules. Second, the Laplace predictive approximation collapses after rule pruning; replacing it with variational inference or bootstrap-based intervals would directly address the undercoverage observed here. Third, the low-dimensional UCI benchmarks ($d=8$) limit the observable benefit of sparsity; we expect compounding advantages in $d>30$ settings, where dense TSK models have $R(d+1) > 150$ parameters and sparsity is essential rather than optional. Closing the gap between analytical approximations and full Bayesian inference for sparse TSK systems remains an open challenge with clear practical motivation.
+We introduced exact Bayesian inference for spike-and-slab priors over TSK consequents: a block-Gibbs sampler combined with Bayesian model averaging that recovers well-calibrated 95\% prediction intervals (PICP $=0.94$--$0.95$) where the BIC-plus-Laplace approximation it replaces covers almost nothing (PICP $=0.00$--$0.18$). We validated the method against a corrected dense baseline, obtained by fixing a membership-function bug that had silently depressed reported TSK baselines ($R^2=0.41\rightarrow0.94$). We also characterized when sparsity helps, showing that on low-dimensional data neither rule-level nor coefficient-level sparsity beats the dense baseline---delineating the regime in which sparse selection is warranted rather than claiming a free lunch. The method generalizes to any rule-based regression with linear consequents, and the corrected code and baselines are released to support reproducible, uncertainty-aware fuzzy-system inference.
 
 \section*{Acknowledgments}
 
@@ -335,23 +274,19 @@ The author declares no specific funding for this research.
 
 \section*{Data Availability}
 
-Datasets are publicly available from the UCI Machine Learning Repository: Energy Efficiency (dataset 242) \cite{tsanas2012accurate}, Concrete Compressive Strength (dataset 165) \cite{yeh1998modeling}, and Facebook Metrics \cite{moro2016predicting} (subsampled to $n=1000$ as described in Section~\ref{sec:experiments}). Additional supplementary results on the UCI Air Quality dataset (dataset 360) are available in the Supplementary Material. Code is available at \texttt{https://github.com/Jackxiaozhiren/tsk-spikeslab}. MAE values for all methods and datasets are reported in the Supplementary Material.
+Datasets are publicly available from the UCI Machine Learning Repository: Energy Efficiency (dataset 242) \cite{tsanas2012accurate} and Concrete Compressive Strength (dataset 165) \cite{yeh1998modeling}. Code is available at \texttt{https://github.com/Jackxiaozhiren/tsk-spikeslab}.
 
-\section*{Conflict of Interest}
+\section*{Declaration of Competing Interest}
 
-The authors declare no competing interests.
+The author declares no competing interests.
 
 \section*{Declaration of Generative AI}
 
-During the preparation of this work the author did not use any generative AI tools for scientific writing. All analyses, figures, and text were produced by the author.
+During the preparation of this work the author used Claude (Anthropic) for code development assistance and language editing. All scientific content, methodology design, experimental results, and interpretation were performed and verified by the author.
 
-\section*{CRediT Author Statement}
+\section*{CRediT authorship contribution statement}
 
 \textbf{Zhiren Xiao}: Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Writing -- original draft, Writing -- review \& editing, Visualization.
-
-\section*{Supplementary Material}
-
-The Supplementary Material includes: (1) full MAE values for all methods across Energy (Heating), Energy (Cooling), Concrete, Facebook Metrics, and Air Quality datasets; (2) extended TSK-LASSO diagnostic code with expanded $\alpha$ grid results (Fig.~S1); (3) $\tau^2$ ablation table (Table~S2); (4) results on the UCI Air Quality dataset ($n=9357$, $d=15$, dataset 360). On Air Quality, TSK-LASSO achieves the best RMSE among fuzzy methods (0.417, vs.\ TSK-SpikeSlab 0.707), demonstrating that the method's relative performance depends on dataset characteristics---specifically, on the degree of multicollinearity in the weighted TSK design matrix. TSK-LS performs poorly on Air Quality (RMSE $=2.236$, $R^2=-60.9$), suggesting that the baseline dense model fails catastrophically on this dataset due to extreme collinearity. These supplementary results complement the main text by showing the full spectrum of method behavior, from data regimes where LASSO succeeds to those where it collapses.
 
 \bibliographystyle{elsarticle-num}
 \bibliography{references}

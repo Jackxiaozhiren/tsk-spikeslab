@@ -1,0 +1,98 @@
+\documentclass[review,1p,times]{elsarticle}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{multirow}
+\usepackage{microtype}
+\usepackage{placeins}
+
+\providecommand{\orcid}[1]{\textsuperscript{\href{https://orcid.org/#1}{\texttt{[ORCID]}}}}
+
+\journal{Information Sciences}
+
+\begin{document}
+
+\begin{frontmatter}
+\title{Supplementary Material for ``Exact Bayesian Spike-and-Slab Inference for Takagi--Sugeno--Kang Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals''}
+\author[addr]{Zhiren Xiao\orcid{0009-0008-2164-4557}}
+\address[addr]{Guangdong University of Finance, Guangzhou, China}
+\end{frontmatter}
+
+Notation and method definitions follow the main text (Sections~2--3). All TSK methods use $R=5$ rules from fuzzy $c$-means ($m=2$) with Gaussian membership spreads equal to the per-cluster standard deviation of training points scaled by $s=1.5$; results are averaged over 30 independent 80/20 train--test splits with a fixed seed unless noted otherwise.
+
+\section{Full MAE Values}
+
+\begin{table}[htbp]
+\centering
+\caption{MAE comparison across all methods and targets (mean $\pm$ std, 30 splits). Best per target in \textbf{bold}.}
+\label{tab:mae}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+Method & Energy Heating & Energy Cooling & Concrete \\
+\midrule
+TSK-LS              & 1.32$\pm$0.13 & 1.79$\pm$0.13 & 6.65$\pm$0.36 \\
+Bayesian-TSK        & 1.32$\pm$0.13 & 1.79$\pm$0.13 & 6.64$\pm$0.36 \\
+TSK-SpikeSlab-BIC   & 15.72$\pm$2.98 & 18.24$\pm$2.74 & 43.16$\pm$4.00 \\
+TSK-SpikeSlab-Gibbs & 1.32$\pm$0.13 & 1.78$\pm$0.13 & 6.62$\pm$0.36 \\
+Random Forest       & \textbf{0.33$\pm$0.03} & \textbf{1.02$\pm$0.08} & \textbf{3.61$\pm$0.24} \\
+SVR                 & 1.80$\pm$0.16 & 2.05$\pm$0.16 & 7.77$\pm$0.33 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The MAE ordering mirrors the $R^2$ ordering of the main text: the three dense Bayesian/least-squares TSK methods are effectively tied, the BIC-based approximation collapses, and the non-interpretable Random Forest reference attains the lowest MAE on every target.
+
+\FloatBarrier
+
+\section{Slab Variance Sensitivity (Coefficient-Level SSVS)}
+
+Table~\ref{tab:tau2} reports the coefficient-level SSVS ablation on the Energy-Cooling target (10 splits, $\pi=0.5$, $R=5$ rules). Varying the slab variance $\tau^2$ from $0.1$ to $100$ (three orders of magnitude) spans the full sparsity--accuracy trade-off: a tight slab ($\tau^2=0.1$) over-shrinks the coefficients and collapses accuracy to $R^2=-5.42$, whereas a diffuse slab ($\tau^2=100$) merely recovers the dense baseline ($R^2=0.92$ versus $0.94$ for TSK-LS) while pruning nothing. No $\tau^2$ setting beats the dense baseline.
+
+\begin{table}[htbp]
+\centering
+\caption{Coefficient-level SSVS $\tau^2$ ablation on Energy-Cooling (10 splits). Dense TSK-LS reference: $R^2=0.94$.}
+\label{tab:tau2}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+$\tau^2$ & $R^2$ & RMSE & PICP & MPIW \\
+\midrule
+$0.1$   & $-5.42$ & 24.11 & 1.00 & 94.57 \\
+$0.3$   & $-1.57$ & 15.04 & 0.96 & 59.42 \\
+$1.0$   & $0.88$  & 3.24  & 0.93 & 12.55 \\
+$3.0$   & $0.91$  & 2.90  & 0.90 & 11.03 \\
+$10.0$  & $0.91$  & 2.85  & 0.89 & 10.76 \\
+$100.0$ & $0.92$  & 2.62  & 0.91 & 9.88 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
+\section{Irrelevant-Feature Ablation}
+
+Table~\ref{tab:noise} reports the irrelevant-feature regime on the Energy-Cooling target: up to 30 standard-normal noise features are appended to the $d=8$ inputs. The dense TSK-LS degrades only modestly (from $R^2=0.93$ to $0.88$), and neither rule-level (TSK-SpikeSlab-Gibbs) nor coefficient-level (TSK-SSVS) sparsity improves upon it. Correct fuzzy $c$-means already provides robustness to irrelevant features, so sparsity offers no free lunch on this low-dimensional domain.
+
+\begin{table}[htbp]
+\centering
+\caption{Irrelevant-feature ablation on Energy-Cooling ($R^2$; dense TSK-LS vs rule-level Gibbs vs coefficient-level SSVS).}
+\label{tab:noise}
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Appended noise features & TSK-LS & TSK-SpikeSlab-Gibbs & TSK-SSVS \\
+\midrule
+$0$  & 0.932 & 0.932 & 0.884 \\
+$4$  & 0.945 & 0.934 & 0.881 \\
+$12$ & 0.878 & 0.878 & 0.876 \\
+$30$ & 0.875 & 0.875 & 0.834 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
+\end{document}

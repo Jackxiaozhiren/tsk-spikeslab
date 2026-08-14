@@ -1,11 +1,26 @@
-% Highlights for: Sparse Bayesian TSK with Spike-and-Slab Priors
-% Target: Applied Soft Computing (Elsevier)
-% Format: 3-5 bullets, each <=85 characters including spaces
+\documentclass[11pt]{article}
+\usepackage{geometry}
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\usepackage{hyperref}
+\usepackage{enumitem}
 
-\begin{highlights}
-\item Introduces spike-and-slab priors for TSK fuzzy rule consequent selection.
-\item Fast analytical BIC approximation selects rules without MCMC sampling.
-\item 38\% rule pruning on Energy data; 0\% pruning on Concrete (data-dependent).
-\item Bayesian TSK yields calibrated prediction intervals (PICP 0.90--0.96).
-\item Full sparsity-accuracy-calibration trade-off characterized on three benchmarks.
-\end{highlights}
+\title{Highlights}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Manuscript:} Exact Bayesian Spike-and-Slab Inference for Takagi--Sugeno--Kang Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals
+
+\vspace{1.5em}
+
+\begin{itemize}[leftmargin=*, labelsep=0.5em]
+\item Exact Gibbs sampling with model averaging gives calibrated 95\% prediction intervals.
+\item The BIC-plus-Laplace approximation it replaces undercovers (PICP 0.00--0.18).
+\item Sparsity offers no free lunch: no sparse variant beats the dense TSK baseline.
+\item Corrects a membership-function bug raising dense TSK $R^2$ from 0.41 to 0.94.
+\item Releases corrected code and baselines as a reproducible Bayesian TSK benchmark.
+\end{itemize}
+
+\end{document}
