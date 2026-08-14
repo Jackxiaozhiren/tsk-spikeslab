@@ -42,7 +42,17 @@
 | requirements.txt | 新建：numpy/scipy/scikit-learn/matplotlib/ucimlrepo |
 | README.md | 新建：入口命令、SEED=42、方法名↔代码类映射表 |
 
-## 五、遗留（明确记录，待后续 Phase）
+## 五、增补（R-sweep 实验 + conjugate 校验修正）
+
+| # | 改动 | 结果 |
+|---|------|------|
+| A2/Z1 闭环 | **实际跑 R-sweep**（R=3,4,5,7,10，3 目标，10 splits，存 `results/raw/rsweep_v2.json`）并写入 supplementary §Rule-Count Sensitivity + manuscript §Setup/§Sparsity/§Discussion | R=5 合理（精度 R≈5–7 饱和）；**R=10 时 Gibbs 仍保留 9.7/10 条规则**——稀疏边界对 R 稳健，强化"无免费午餐"结论；BIC 在每个 R 都崩 |
+| M3 修正 | **conjugate 校验从"参数协方差"改为"预测分布"层面**（`gibbs_verify.py` 重写，用 tsk_core FCM + 真实 Energy-Cooling 数据） | 原参数协方差层面因 TSK 设计矩阵病态（cond≈1e18）无法通过；预测层面通过：ΔR²≤0.006、预测方差中位差异 5.6%(R5)/14%(R10)、覆盖率 0.92 vs 0.92。正文句子已同步改为预测层面表述并加病态说明 |
+| 代码清理 | `gibbs_verify.py` 用 KMeans→改为正确 FCM + 预测级校验；`smoke_test.py` 删 Facebook、修过期 docstring（旧叙事"SSVS prevents overfitting"→新叙事"sparse no free lunch"） | — |
+
+> 诚实记录：此前正文写的"relative covariance error 9e-2"来自合成数据，在真实（病态）数据上不成立，已修正为预测层面校验并明示 cond≈1e18 的病态原因。
+
+## 六、遗留（明确记录，待后续 Phase）
 
 1. **`gibbs_verify.py` / `smoke_test.py` 用 `KMeans` 冒充 FCM**（历史 desk-reject 事故重演），且 `gibbs_verify.py` 名不副实（并不校验 Gibbs）。这两个文件**未纳入本次提交**，需在 Phase 8 删除或重写为 FCM + 闭合形式校验。
 2. **新实验（需重跑，暂缓）**：

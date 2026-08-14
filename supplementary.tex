@@ -95,4 +95,30 @@ $30$ & 0.875 & 0.875 & 0.834 \\
 
 \FloatBarrier
 
+\section{Rule-Count Sensitivity}
+
+Table~\ref{tab:rsweep} sweeps the rule count $R$ from $3$ to $10$ on all three targets (10 splits). Two conclusions follow. First, $R=5$ is a reasonable default: the dense (TSK-LS) and conjugate (Bayesian-TSK) accuracy saturates by $R\approx5$--$7$ on every target, and the Gibbs sampler tracks the dense baseline at every $R$, providing a consistency check of the sampler outside its default configuration. Second, the sparsity boundary is robust to the rule count: even at $R=10$ (an over-parameterized model with $R(d{+}1)=90$ consequent coefficients) the Gibbs sampler keeps nearly all rules active (mean $9.7/10$), so rule-level sparsity does not activate even when the model is heavily over-parameterized. The BIC-based approximation (TSK-SpikeSlab-BIC) collapses to negative $R^2$ at every rule count.
+
+\begin{table}[htbp]
+\centering
+\caption{Rule-count sweep ($R^2$, mean over 10 splits). ``Rules'' is the mean number of active rules of the Gibbs sampler (dense methods always keep $R$).}
+\label{tab:rsweep}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{c|ccccc|ccccc|ccccc}
+\toprule
+& \multicolumn{5}{c|}{Energy Heating} & \multicolumn{5}{c|}{Energy Cooling} & \multicolumn{5}{c}{Concrete} \\
+$R$ & LS & Bayes & BIC & Gibbs & Rules & LS & Bayes & BIC & Gibbs & Rules & LS & Bayes & BIC & Gibbs & Rules \\
+\midrule
+$3$  & 0.949 & 0.948 & $-2.17$ & 0.948 & 2.6 & 0.918 & 0.917 & $-12.88$ & 0.916 & 2.7 & 0.611 & 0.625 & $-5.34$ & 0.673 & 3.0 \\
+$4$  & 0.983 & 0.979 & $-0.47$ & 0.976 & 4.0 & 0.950 & 0.946 & $-1.51$ & 0.939 & 4.0 & 0.714 & 0.717 & $-6.09$ & 0.729 & 4.0 \\
+$5$  & 0.970 & 0.970 & $-1.37$ & 0.970 & 4.9 & 0.932 & 0.932 & $-2.53$ & 0.932 & 4.9 & 0.747 & 0.747 & $-5.82$ & 0.747 & 5.0 \\
+$7$  & 0.967 & 0.967 & $-7.16$ & 0.966 & 6.6 & 0.929 & 0.928 & $-9.71$ & 0.927 & 6.6 & 0.750 & 0.748 & $-6.40$ & 0.748 & 7.0 \\
+$10$ & 0.976 & 0.975 & $-5.79$ & 0.973 & 9.7 & 0.939 & 0.939 & $-8.82$ & 0.934 & 9.7 & 0.758 & 0.773 & $-2.34$ & 0.777 & 9.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
 \end{document}
