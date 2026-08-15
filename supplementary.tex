@@ -199,4 +199,26 @@ TSK-SSVS ($\tau^2=10$)      & $16.48{\pm}0.55$ & $+0.763{\pm}0.018$ & $0.935$ \\
 
 \FloatBarrier
 
+\section{Mean Prediction-Interval Width}
+
+Table~\ref{tab:mpiw} reports the mean prediction-interval width (MPIW) for the three probabilistic methods across all targets (30 splits). The compact widths support the calibration claim of the main text (Section~5.3, MPIW $\approx6.7$--$32.9$).
+
+\begin{table}[htbp]
+\centering
+\caption{MPIW for the probabilistic methods (mean over 30 splits).}
+\label{tab:mpiw}
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Method & Energy Heating & Energy Cooling & Concrete \\
+\midrule
+Bayesian-TSK        & $6.61$ & $9.20$ & $32.04$ \\
+TSK-SpikeSlab-Gibbs & $6.69$ & $9.40$ & $32.87$ \\
+Gaussian Process    & $1.75$ & $5.18$ & $20.46$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
 \end{document}
