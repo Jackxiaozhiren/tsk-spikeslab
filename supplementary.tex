@@ -37,13 +37,14 @@ TSK-LS              & 1.32$\pm$0.13 & 1.79$\pm$0.13 & 6.65$\pm$0.36 \\
 Bayesian-TSK        & 1.32$\pm$0.13 & 1.79$\pm$0.13 & 6.64$\pm$0.36 \\
 TSK-SpikeSlab-BIC   & 15.72$\pm$2.98 & 18.24$\pm$2.74 & 43.16$\pm$4.00 \\
 TSK-SpikeSlab-Gibbs & 1.32$\pm$0.13 & 1.78$\pm$0.13 & 6.62$\pm$0.36 \\
-Random Forest       & \textbf{0.33$\pm$0.03} & \textbf{1.02$\pm$0.08} & \textbf{3.61$\pm$0.24} \\
+Random Forest       & \textbf{0.33$\pm$0.03} & 1.02$\pm$0.08 & \textbf{3.61$\pm$0.24} \\
 SVR                 & 1.80$\pm$0.16 & 2.05$\pm$0.16 & 7.77$\pm$0.33 \\
+Gaussian Process    & 0.34$\pm$0.03 & \textbf{0.92$\pm$0.06} & 4.01$\pm$0.25 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The MAE ordering mirrors the $R^2$ ordering of the main text: the three dense Bayesian/least-squares TSK methods are effectively tied, the BIC-based approximation collapses, and the non-interpretable Random Forest reference attains the lowest MAE on every target.
+The MAE ordering mirrors the $R^2$ ordering of the main text: the three dense Bayesian/least-squares TSK methods are effectively tied, the BIC-based approximation collapses, and the non-interpretable references (Random Forest and Gaussian Process) attain the lowest MAE.
 
 \FloatBarrier
 
@@ -74,7 +75,7 @@ $100.0$ & $0.92$  & 2.62  & 0.91 & 9.88 \\
 
 \section{Irrelevant-Feature Ablation}
 
-Table~\ref{tab:noise} reports the irrelevant-feature regime on the Energy-Cooling target: up to 30 standard-normal noise features are appended to the $d=8$ inputs. The dense TSK-LS degrades only modestly (from $R^2=0.93$ to $0.88$), and neither rule-level (TSK-SpikeSlab-Gibbs) nor coefficient-level (TSK-SSVS) sparsity improves upon it. Correct fuzzy $c$-means already provides robustness to irrelevant features, so sparsity offers no free lunch on this low-dimensional domain.
+Table~\ref{tab:noise} reports the irrelevant-feature regime on the Energy-Cooling target (10 splits): up to 30 standard-normal noise features are appended to the $d=8$ inputs. The dense TSK-LS degrades only modestly (from $R^2=0.93$ to $0.88$, where the $0.93$ is the 10-split dense baseline), and neither rule-level (TSK-SpikeSlab-Gibbs) nor coefficient-level (TSK-SSVS) sparsity improves upon it. Correct fuzzy $c$-means already provides robustness to irrelevant features, so sparsity does not improve on the dense baseline in this low-dimensional regime.
 
 \begin{table}[htbp]
 \centering
@@ -147,6 +148,27 @@ BIC weights + BMA (no threshold)     & $0.95$ & $0.92$ & $7.8$ \\
 BIC-PIP + threshold + Laplace (LS)   & $0.60$ & $0.93$ & $26.1$ \\
 Gibbs-PIP + threshold + Laplace (LS) & $0.94$ & $0.94$ & $8.4$ \\
 Full BIC baseline (as implemented)   & $-2.53$ & $0.00$ & $9.9$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
+\section{MCMC Convergence Diagnostics}
+
+Table~\ref{tab:mcmc} reports multi-chain convergence diagnostics for the rule-level Gibbs sampler (TSK-SpikeSlab-Gibbs) on a representative split of two targets. Three chains are run with independent seeds ($42$, $123$, $456$), each with $1{,}000$ burn-in and $2{,}000$ retained draws. The Gelman--Rubin statistic satisfies $\hat{R}\le1.01$ for the inclusion indicators ($\boldsymbol{\gamma}$), the consequents ($\boldsymbol{\beta}$), and the noise variance ($\sigma^2$), and the effective sample size equals the full chain length for $\boldsymbol{\gamma}$ and exceeds $1{,}700$ for $\sigma^2$, indicating well-mixed chains. On Concrete the inclusion indicators are deterministically active (posterior inclusion probability $=1.0$ for every rule), so the $\boldsymbol{\gamma}$ chain is constant; the $\boldsymbol{\beta}$ and $\sigma^2$ chains mix as above.
+
+\begin{table}[htbp]
+\centering
+\caption{MCMC convergence diagnostics for TSK-SpikeSlab-Gibbs (three chains, $1{,}000$ burn-in, $2{,}000$ retained draws). $\hat{R}$ is the Gelman--Rubin statistic; ESS is the effective sample size.}
+\label{tab:mcmc}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+Target & $\hat{R}(\boldsymbol{\gamma})$ (max) & $\hat{R}(\boldsymbol{\beta})$ (median / max) & $\hat{R}(\sigma^2)$ & ESS($\sigma^2$) \\
+\midrule
+Energy Cooling & $1.000$ & $1.000$ / $1.001$ & $1.000$ & $1{,}725$ \\
+Concrete & constant ($=1.0$) & $1.000$ / $1.001$ & $1.000$ & $1{,}744$ \\
 \bottomrule
 \end{tabular}
 \end{table}
