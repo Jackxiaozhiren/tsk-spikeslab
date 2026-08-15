@@ -33,7 +33,7 @@ def load_superconductivity(n_subsample=3000, seed=SEED):
     return X[idx], y[idx]
 
 
-def run(X, y, n_splits=15, k=5):
+def run(X, y, n_splits=30, k=5, out_path=None):
     splits = get_splits(y, n_splits)
     methods = [
         ("TSK-LS", TSK_LS, {"k": k}),
@@ -46,6 +46,8 @@ def run(X, y, n_splits=15, k=5):
          {"k": k, "pi": 0.5, "tau2": 10.0, "n_burn": 800, "n_samples": 800}),
     ]
     print(f"n={len(y)}  d={X.shape[1]}  k={k}  splits={n_splits}")
+    out = {"n": len(y), "d": int(X.shape[1]), "k": k, "n_splits": n_splits,
+           "dataset": "Superconductivity (UCI 464, subsample)", "methods": {}}
     for name, cls, kw in methods:
         t0 = time.time()
         rows = []
@@ -66,10 +68,24 @@ def run(X, y, n_splits=15, k=5):
         mpis = [r.get("MPIW") for r in rows if r.get("MPIW") is not None]
         p = np.mean(pics) if pics else np.nan
         w = np.mean(mpis) if mpis else np.nan
+        out["methods"][name] = {
+            "RMSE_mean": float(rm), "RMSE_std": float(np.std([r["RMSE"] for r in rows])),
+            "R2_mean": float(r2), "R2_std": float(np.std([r["R2"] for r in rows])),
+            "PICP": float(p), "MPIW": float(w),
+        }
         print(f"  {name:<22} RMSE={rm:.3f}  R2={r2:+.3f}  "
               f"PICP={p:.3f}  MPIW={w:.2f}  ({time.time()-t0:.0f}s)")
+    if out_path:
+        import json
+        with open(out_path, "w") as f:
+            json.dump(out, f, indent=2)
+        print("saved ->", out_path)
+    return out
 
 
 if __name__ == "__main__":
+    import os
     X, y = load_superconductivity()
-    run(X, y, n_splits=15, k=5)
+    out_path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "results", "raw", "highdim_sparsity.json")
+    run(X, y, n_splits=30, k=5, out_path=out_path)

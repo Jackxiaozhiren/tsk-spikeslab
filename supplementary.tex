@@ -175,4 +175,28 @@ Concrete & constant ($=1.0$) & $1.000$ / $1.001$ & $1.000$ & $1{,}744$ \\
 
 \FloatBarrier
 
+\section{High-Dimensional Sparsity Boundary}
+
+Table~\ref{tab:highdim} tests the sparsity boundary on a real high-dimensional regression benchmark (Superconductivity, UCI id 464; subsample of $n=3000$ rows with $d=81$ features, $30$ splits, $R=5$ rules). The pattern of the low-dimensional benchmarks reproduces almost exactly: rule-level sparsity (TSK-SpikeSlab-Gibbs) matches the dense baselines in $R^2$ ($0.794$ versus $0.792$--$0.795$) while keeping calibration at the nominal level (PICP $0.940$), and coefficient-level sparsity (TSK-SSVS) over-shrinks, with a tight slab ($\tau^2=1$) collapsing $R^2$ to $0.674$. A diffuse slab ($\tau^2=10$) recovers only to $0.763$, still below dense. The sparsity boundary therefore is not a low-dimensional artifact; whether sparsity pays off under different antecedent structures or much larger samples remains open. Notably, on this high-dimensional target the rule-level Gibbs sampler maintains nominal calibration (PICP $0.940$) where the dense conjugate baseline slightly undercovers (PICP $0.921$), consistent with the calibration contribution of the main text.
+
+\begin{table}[htbp]
+\centering
+\caption{High-dimensional sparsity boundary on Superconductivity (mean $\pm$ std over $30$ splits; subsample $n=3000$, $d=81$, $R=5$). PICP is the $95\%$ interval coverage; MPIW is the mean prediction-interval width.}
+\label{tab:highdim}
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Method & RMSE & $R^2$ & PICP \\
+\midrule
+TSK-LS (dense)              & $15.46{\pm}0.82$ & $+0.792{\pm}0.024$ & -- \\
+Bayesian-TSK (dense conjugate) & $15.33{\pm}0.77$ & $+0.795{\pm}0.023$ & $0.921$ \\
+TSK-SpikeSlab-Gibbs         & $15.37{\pm}0.70$ & $+0.794{\pm}0.021$ & $0.940$ \\
+TSK-SSVS ($\tau^2=1$)       & $19.35{\pm}0.56$ & $+0.674{\pm}0.018$ & $0.940$ \\
+TSK-SSVS ($\tau^2=10$)      & $16.48{\pm}0.55$ & $+0.763{\pm}0.018$ & $0.935$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
 \end{document}
