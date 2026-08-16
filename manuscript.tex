@@ -283,6 +283,15 @@ Gaussian Process & $0.47{\pm}0.05$ & 0.998 & 0.93 & $1.35{\pm}0.11$ & 0.98 & 0.9
 \label{sec:calibration}
 
 Fig.~\ref{fig:cal} reports interval calibration, assessed with the coverage and width diagnostics standard in the probabilistic-forecast literature \cite{gneiting2007strictly}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{fig3_calibration.pdf}
+\caption{Prediction-interval coverage (PICP) with the nominal 95\% reference (dashed).
+Gibbs/BMA and the conjugate Bayesian model attain near-nominal coverage; the BIC-plus-Laplace approximation undercovers as implemented.}
+\label{fig:cal}
+\end{figure}
+
 Pooled over the 30 splits, both the conjugate Bayesian-TSK and the Gibbs sampler attain mean PICP of $0.95$ on the Energy-Heating and Concrete targets and $0.935$ on Energy-Cooling (displayed as $0.93$ in Table~\ref{tab:main}).
 The $95\%$ binomial (Wilson) intervals are $[0.945, 0.958]$, $[0.944, 0.955]$, and $[0.927, 0.941]$, respectively.
 The Gibbs values agree with the conjugate values to within $0.004$.
@@ -295,25 +304,22 @@ The ablation (Supplementary, Section~5) isolates the mechanism: hard thresholdin
 The coverage collapse thus arises from the as-implemented pipeline's ridge-regularized fit of the ill-conditioned design matrix rather than from the Laplace covariance per se.
 The Gibbs/BMA prediction of Eq.~\eqref{eq:bma} restores accuracy and efficiency, propagating model uncertainty through the mixture variance.
 The value of averaging over configurations is most visible where the closed-form conjugate baseline degrades.
-On the high-dimensional check (Superconductivity, $d=81$, Section~\ref{sec:sparse}, Supplementary Table 7), the Gibbs/BMA estimator maintains near-nominal calibration (PICP $0.940$) where the dense conjugate baseline slightly undercovers (PICP $0.921$). Fig.~\ref{fig:calibillust} confirms this calibration across a range of nominal levels and shows the 95\% intervals of the two Bayesian methods against the held-out truth on a representative split.
+On the high-dimensional check (Superconductivity, $d=81$, Section~\ref{sec:sparse}, Supplementary Table 7), the Gibbs/BMA estimator maintains near-nominal calibration (PICP $0.940$) where the dense conjugate baseline slightly undercovers (PICP $0.921$). Fig.~\ref{fig:rel} confirms this calibration across a range of nominal levels.
 
-\begin{figure}[tbhp]
+\begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{fig3_calibration.pdf}
-\caption{Prediction-interval coverage (PICP) with the nominal 95\% reference (dashed).
-Gibbs/BMA and the conjugate Bayesian model attain near-nominal coverage; the BIC-plus-Laplace approximation undercovers as implemented.}
-\label{fig:cal}
+\includegraphics[width=0.72\textwidth]{fig5_reliability.pdf}
+\caption{Empirical coverage versus nominal coverage for the conjugate Bayesian-TSK, the Gibbs/BMA sampler, and the Gaussian-process reference on Energy-Cooling (30 splits). Points on the diagonal would indicate perfectly calibrated intervals. The Bayesian methods over-cover at the lowest nominal levels (empirical coverage $0.57$ at nominal $0.5$). They under-cover slightly in the range $0.8$--$0.95$ (empirical $0.94$ at nominal $0.95$) and return to the diagonal at nominal $0.99$. The Gaussian process falls below the diagonal at nominal $0.99$.}
+\label{fig:rel}
 \end{figure}
 
-\FloatBarrier
+Fig.~\ref{fig:piband} shows the 95\% intervals of the two Bayesian methods against the held-out truth on a representative split.
 
-\begin{figure}[tbhp]
+\begin{figure}[htbp]
 \centering
-\includegraphics[width=0.8\textwidth]{fig5_reliability.pdf}\\[4pt]
 \includegraphics[width=0.8\textwidth]{fig6_pi_band.pdf}
-\caption{(a) Empirical coverage versus nominal coverage for the conjugate Bayesian-TSK, the Gibbs/BMA sampler, and the Gaussian-process reference on Energy-Cooling (30 splits). Points on the diagonal would indicate perfectly calibrated intervals; the Bayesian methods over-cover at the lowest nominal levels (empirical coverage $0.57$ at nominal $0.5$), under-cover slightly in the range $0.8$--$0.95$ (empirical $0.94$ at nominal $0.95$), and return to the diagonal at nominal $0.99$; the Gaussian process falls below the diagonal at nominal $0.99$.
-(b) 95\% prediction intervals (shaded) and mean prediction (line) versus held-out truth (points) on one representative Energy-Cooling split, for the conjugate Bayesian-TSK (left) and Gibbs+BMA (right). The intervals track the sorted truth closely and cover the large majority of test points at compact widths.}
-\label{fig:calibillust}
+\caption{95\% prediction intervals (shaded) and mean prediction (line) versus held-out truth (points) on one representative Energy-Cooling split, for the conjugate Bayesian-TSK (left) and Gibbs+BMA (right). The intervals track the sorted truth closely and cover the large majority of test points at compact widths.}
+\label{fig:piband}
 \end{figure}
 
 \FloatBarrier
