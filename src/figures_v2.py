@@ -115,7 +115,7 @@ _all_vals = [REPORTED_R2[ds][m] for ds in DATASETS for m in ("TSK-LS", "Bayesian
 _all_vals += [_mean(tier1[ds][m], "R2") for ds in DATASETS for m in ("TSK-LS", "Bayesian-TSK")]
 ax.set_ylim(min(_all_vals) - 0.5, 1.18)
 axes[0].set_ylabel("$R^2$")
-axes[0].legend(fontsize=10, framealpha=0.9, loc="upper left")
+axes[0].legend(fontsize=10, framealpha=0.9, loc="lower left")
 fig.suptitle("Reproducibility fix: membership-spread bug corrected",
              fontweight="bold", y=0.99)
 fig.tight_layout(rect=[0, 0, 1, 0.94])
@@ -147,7 +147,8 @@ ax.set_xticklabels(DATASETS, fontsize=11)
 ax.set_ylabel("$R^2$")
 ax.set_title("Predictive accuracy across datasets", fontweight="bold")
 ax.set_ylim(-7.0, 1.15)
-ax.legend(fontsize=9, ncol=4, loc="lower left", framealpha=0.9)
+ax.legend(fontsize=9, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.12),
+          framealpha=0.9)
 ax.grid(axis="y", alpha=0.3)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "fig2_main_comparison.pdf"), bbox_inches="tight")
@@ -179,7 +180,8 @@ ax.set_xticklabels(DATASETS, fontsize=11)
 ax.set_ylabel("PICP (coverage)")
 ax.set_title("Prediction-interval calibration", fontweight="bold")
 ax.set_ylim(0, 1.12)
-ax.legend(fontsize=9.5, framealpha=0.9, loc="lower left")
+ax.legend(fontsize=9.5, framealpha=0.9, loc="upper center",
+          bbox_to_anchor=(0.5, -0.16), ncol=3)
 ax.grid(axis="y", alpha=0.3)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "fig3_calibration.pdf"), bbox_inches="tight")
