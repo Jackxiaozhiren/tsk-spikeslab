@@ -74,11 +74,14 @@ tier2 = json.load(open(os.path.join(RAW_DIR, "tier2_tau2_v2.json")))
 tier3 = json.load(open(os.path.join(RAW_DIR, "tier3_noise_v2.json")))
 gp = json.load(open(os.path.join(RAW_DIR, "gp_baseline.json")))
 
-# ---- R^2 values reported in the REJECTED manuscript (buggy baselines) ----
+# ---- Reproduced buggy (before) R^2 values ----
+# Loaded from the membership-bug reproduction run (src/buggy_membership_repro.py ->
+# results/raw/buggy_baselines.json), so the "reported (buggy)" bars are
+# regenerable from data rather than hard-coded constants.
+_buggy = json.load(open(os.path.join(RAW_DIR, "buggy_baselines.json")))
 REPORTED_R2 = {
-    "Energy-Heating": {"TSK-LS": 0.5671, "Bayesian-TSK": 0.8681},
-    "Energy-Cooling": {"TSK-LS": 0.4084, "Bayesian-TSK": 0.8049},
-    "Concrete": {"TSK-LS": 0.4376, "Bayesian-TSK": 0.5030},
+    ds: {m: float(np.mean([r["R2"] for r in _buggy[ds][m]])) for m in _buggy[ds]}
+    for ds in DATASETS
 }
 
 
@@ -93,7 +96,7 @@ for ax, method in zip(axes, ["TSK-LS", "Bayesian-TSK"]):
     reported = [REPORTED_R2[ds][method] for ds in DATASETS]
     corrected = [_mean(tier1[ds][method], "R2") for ds in DATASETS]
     b1 = ax.bar(x - w / 2, reported, w, color="#D55E00", edgecolor="black",
-                linewidth=0.6, label="Reported (buggy)")
+                linewidth=0.6, label="Reproduced (buggy)")
     b2 = ax.bar(x + w / 2, corrected, w, color="#4472C4", edgecolor="black",
                 linewidth=0.6, label="Corrected")
     for b, v in zip(b1, reported):
@@ -107,7 +110,10 @@ for ax, method in zip(axes, ["TSK-LS", "Bayesian-TSK"]):
     ax.set_xticklabels(DATASETS, rotation=15, fontsize=10.5)
     ax.set_title(f"{method}", fontweight="bold")
     ax.grid(axis="y", alpha=0.3)
-    ax.set_ylim(0, 1.18)
+    ax.axhline(0, color="black", linewidth=0.6)
+_all_vals = [REPORTED_R2[ds][m] for ds in DATASETS for m in ("TSK-LS", "Bayesian-TSK")]
+_all_vals += [_mean(tier1[ds][m], "R2") for ds in DATASETS for m in ("TSK-LS", "Bayesian-TSK")]
+ax.set_ylim(min(_all_vals) - 0.5, 1.18)
 axes[0].set_ylabel("$R^2$")
 axes[0].legend(fontsize=10, framealpha=0.9, loc="upper left")
 fig.suptitle("Reproducibility fix: membership-spread bug corrected",

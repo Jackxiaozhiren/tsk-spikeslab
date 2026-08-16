@@ -14,7 +14,7 @@
 \begin{document}
 
 \begin{frontmatter}
-\title{Supplementary Material for ``Exact Bayesian Inference for Spike-and-Slab Priors in Takagi--Sugeno--Kang Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals''}
+\title{Supplementary Material for ``Exact Bayesian Inference for Spike-and-Slab Priors in Takagi--Sugeno--Kang Fuzzy Systems with Approximately Calibrated Model-Averaged Prediction Intervals''}
 \author[addr]{Zhiren Xiao\orcid{0009-0008-2164-4557}}
 \address[addr]{Guangdong University of Finance, Guangzhou, China}
 \end{frontmatter}
@@ -31,7 +31,7 @@ Notation and method definitions follow the main text (Sections~2--3). All TSK me
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lccc}
 \toprule
-Method & Energy Heating & Energy Cooling & Concrete \\
+Method & Energy-Heating & Energy-Cooling & Concrete \\
 \midrule
 TSK-LS              & 1.32$\pm$0.13 & 1.79$\pm$0.13 & 6.65$\pm$0.36 \\
 Bayesian-TSK        & 1.32$\pm$0.13 & 1.79$\pm$0.13 & 6.64$\pm$0.36 \\
@@ -50,7 +50,7 @@ The MAE ordering mirrors the $R^2$ ordering of the main text: the three dense Ba
 
 \section{Slab Variance Sensitivity (Coefficient-Level SSVS)}
 
-Table~\ref{tab:tau2} reports the coefficient-level SSVS ablation on the Energy-Cooling target (10 splits, $\pi=0.5$, $R=5$ rules). Varying the slab variance $\tau^2$ from $0.1$ to $100$ (three orders of magnitude) spans the full sparsity--accuracy trade-off: a tight slab ($\tau^2=0.1$) over-shrinks the coefficients and collapses accuracy to $R^2=-5.42$, whereas a diffuse slab ($\tau^2=100$) merely recovers the dense baseline ($R^2=0.92$ versus $0.94$ for TSK-LS) while pruning nothing. No $\tau^2$ setting beats the dense baseline.
+Table~\ref{tab:tau2} reports the coefficient-level SSVS ablation on the Energy-Cooling target (10 splits, $\pi=0.5$, $R=5$ rules). Varying the slab variance $\tau^2$ from $0.1$ to $100$ (three orders of magnitude) spans the full sparsity--accuracy trade-off: a tight slab ($\tau^2=0.1$) over-shrinks the coefficients and collapses accuracy to $R^2=-5.42$, whereas a diffuse slab ($\tau^2=100$) merely recovers the dense baseline ($R^2=0.92$ versus $0.94$ for TSK-LS) while pruning nothing. No $\tau^2$ setting improves on the dense baseline.
 
 \begin{table}[htbp]
 \centering
@@ -108,7 +108,7 @@ Table~\ref{tab:rsweep} sweeps the rule count $R$ from $3$ to $10$ on all three t
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{c|ccccc|ccccc|ccccc}
 \toprule
-& \multicolumn{5}{c|}{Energy Heating} & \multicolumn{5}{c|}{Energy Cooling} & \multicolumn{5}{c}{Concrete} \\
+& \multicolumn{5}{c|}{Energy-Heating} & \multicolumn{5}{c|}{Energy-Cooling} & \multicolumn{5}{c}{Concrete} \\
 $R$ & LS & Bayes & BIC & Gibbs & Rules & LS & Bayes & BIC & Gibbs & Rules & LS & Bayes & BIC & Gibbs & Rules \\
 \midrule
 $3$  & 0.949 & 0.948 & $-2.17$ & 0.948 & 2.6 & 0.918 & 0.917 & $-12.88$ & 0.916 & 2.7 & 0.611 & 0.625 & $-5.34$ & 0.673 & 3.0 \\
@@ -156,7 +156,7 @@ Full BIC baseline (as implemented)   & $-2.53$ & $0.00$ & $9.9$ \\
 
 \section{MCMC Convergence Diagnostics}
 
-Table~\ref{tab:mcmc} reports multi-chain convergence diagnostics for the rule-level Gibbs sampler (TSK-SpikeSlab-Gibbs) on a representative split of two targets. Three chains are run with independent seeds ($42$, $123$, $456$), each with $1{,}000$ burn-in and $2{,}000$ retained draws. The Gelman--Rubin statistic satisfies $\hat{R}\le1.01$ for the inclusion indicators ($\boldsymbol{\gamma}$), the consequents ($\boldsymbol{\beta}$), and the noise variance ($\sigma^2$), and the effective sample size equals the full chain length for $\boldsymbol{\gamma}$ and exceeds $1{,}700$ for $\sigma^2$, indicating well-mixed chains. On Concrete the inclusion indicators are deterministically active (posterior inclusion probability $=1.0$ for every rule), so the $\boldsymbol{\gamma}$ chain is constant; the $\boldsymbol{\beta}$ and $\sigma^2$ chains mix as above. Diagnostics are reported for the rule-level sampler; on these benchmarks the $\boldsymbol{\gamma}$ chains of the coefficient-level SSVS also saturate near full activation, so we expect qualitatively similar mixing, but we do not claim formal convergence verification for those runs.
+Table~\ref{tab:mcmc} reports multi-chain convergence diagnostics for the rule-level Gibbs sampler (TSK-SpikeSlab-Gibbs) on a representative split of two targets. Three chains are run with independent seeds ($42$, $123$, $456$), each with $1{,}000$ burn-in and $2{,}000$ retained draws. The Gelman--Rubin statistic satisfies $\hat{R}\le1.001$ for the consequents ($\boldsymbol{\beta}$) and the noise variance ($\sigma^2$), and the effective sample size exceeds $1{,}700$ for $\sigma^2$, indicating well-mixed $\boldsymbol{\beta}$ and $\sigma^2$ chains. The inclusion-indicator chains are (near-)constant on these benchmarks---posterior inclusion probability saturates near $1.0$ for every rule---so their effective sample size equals the chain length by construction rather than from active exploration; on Concrete the $\boldsymbol{\gamma}$ chain is exactly constant. Diagnostics are reported for the rule-level sampler; on these benchmarks the $\boldsymbol{\gamma}$ chains of the coefficient-level SSVS also saturate near full activation, so we expect qualitatively similar mixing, but we do not claim formal convergence verification for those runs.
 
 \begin{table}[htbp]
 \centering
@@ -167,7 +167,7 @@ Table~\ref{tab:mcmc} reports multi-chain convergence diagnostics for the rule-le
 \toprule
 Target & $\hat{R}(\boldsymbol{\gamma})$ (max) & $\hat{R}(\boldsymbol{\beta})$ (median / max) & $\hat{R}(\sigma^2)$ & ESS($\sigma^2$) \\
 \midrule
-Energy Cooling & $1.000$ & $1.000$ / $1.001$ & $1.000$ & $1{,}725$ \\
+Energy-Cooling & $1.000$ & $1.000$ / $1.001$ & $1.000$ & $1{,}725$ \\
 Concrete & constant ($=1.0$) & $1.000$ / $1.001$ & $1.000$ & $1{,}744$ \\
 \bottomrule
 \end{tabular}
@@ -177,7 +177,7 @@ Concrete & constant ($=1.0$) & $1.000$ / $1.001$ & $1.000$ & $1{,}744$ \\
 
 \section{High-Dimensional Sparsity Boundary}
 
-Table~\ref{tab:highdim} tests the sparsity boundary on a real high-dimensional regression benchmark (Superconductivity, UCI id 464; subsample of $n=3000$ rows with $d=81$ features, $30$ splits, $R=5$ rules). The pattern of the low-dimensional benchmarks reproduces almost exactly: rule-level sparsity (TSK-SpikeSlab-Gibbs) matches the dense baselines in $R^2$ ($0.794$ versus $0.792$--$0.795$) while keeping calibration at the nominal level (PICP $0.940$), and coefficient-level sparsity (TSK-SSVS) over-shrinks, with a tight slab ($\tau^2=1$) collapsing $R^2$ to $0.674$. A diffuse slab ($\tau^2=10$) recovers only to $0.763$, still below dense. The sparsity boundary therefore is not a low-dimensional artifact; whether sparsity pays off under different antecedent structures or much larger samples remains open. Notably, on this high-dimensional target the rule-level Gibbs sampler maintains nominal calibration (PICP $0.940$) where the dense conjugate baseline slightly undercovers (PICP $0.921$), consistent with the calibration contribution of the main text.
+Table~\ref{tab:highdim} tests the sparsity boundary on a real high-dimensional regression benchmark (Superconductivity, UCI id 464; subsample of $n=3000$ rows with $d=81$ features, $30$ splits, $R=5$ rules). The pattern of the low-dimensional benchmarks reproduces almost exactly: rule-level sparsity (TSK-SpikeSlab-Gibbs) matches the dense baselines in $R^2$ ($0.794$ versus $0.792$--$0.795$) while keeping calibration at the nominal level (PICP $0.940$), and coefficient-level sparsity (TSK-SSVS) over-shrinks across the full slab-variance grid: Table~\ref{tab:highdim} reports the two settings that bracket the low-dimensional sweep of Table~\ref{tab:tau2} ($\tau^2=1$, collapsing $R^2$ to $0.674$; $\tau^2=10$, recovering only to $0.763$, still below dense), and a $10$-split sweep of the complete grid confirms the pattern: $R^2$ rises monotonically from $0.36$ at $\tau^2=0.1$ to $0.79$ at $\tau^2=100$, no setting improves on the dense baseline ($0.792$), and the most diffuse slab ($\tau^2=100$) merely recovers it ($0.794$). The sparsity boundary therefore is not a low-dimensional artifact and does not depend on a particular slab-variance choice; whether sparsity is beneficial under different antecedent structures or much larger samples remains open. On this high-dimensional target, the rule-level Gibbs sampler also maintains near-nominal calibration (PICP $0.940$) where the dense conjugate baseline slightly undercovers (PICP $0.921$), consistent with the calibration contribution of the main text.
 
 \begin{table}[htbp]
 \centering
@@ -210,11 +210,38 @@ Table~\ref{tab:mpiw} reports the mean prediction-interval width (MPIW) for the t
 \footnotesize
 \begin{tabular}{lccc}
 \toprule
-Method & Energy Heating & Energy Cooling & Concrete \\
+Method & Energy-Heating & Energy-Cooling & Concrete \\
 \midrule
 Bayesian-TSK        & $6.61$ & $9.20$ & $32.04$ \\
 TSK-SpikeSlab-Gibbs & $6.69$ & $9.40$ & $32.87$ \\
 Gaussian Process    & $1.75$ & $5.18$ & $20.46$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
+\section{Synthetic Validation of the Inclusion Full Conditional}
+
+The fixed-activation correctness check of the main text (Section~3.3) exercises the $\boldsymbol{\beta}$ and $\sigma^2$ updates but not the inclusion full conditional of the main text (the $\gamma_j$ update of Section~3.4), because the indicators are fixed there. On the real benchmarks the indicators also saturate near full activation. We therefore validate the $\gamma_j$ update on a synthetic problem with \emph{known sparse} ground truth, where the exact posterior over rule configurations is computable.
+
+\emph{Setup.} We generate $n=600$ samples from a synthetic TSK system with $R=5$ rules and $d=2$ features, in which only rules $0$ and $2$ have nonzero consequents (ground truth active set $\{0,2\}$), with additive Gaussian noise of variance $\sigma^2=1$. The fuzzy partition is built by fuzzy $c$-means as in the main text. We then (i) run the rule-level block-Gibbs sampler ($\pi=0.5$, $\tau^2=10$, $\sigma^2\sim\mathrm{InvGamma}(0.01,0.01)$, $2{,}000$ burn-in, $10{,}000$ retained draws) and (ii) compute the \emph{exact} posterior inclusion probabilities by enumerating all $2^5=32$ rule configurations, evaluating each configuration's marginal likelihood in closed form via the Woodbury identities, and integrating $\sigma^2$ out over its inverse-gamma prior.
+
+\emph{Result.} Table~\ref{tab:synthetic} reports the sampler's inclusion probabilities against the exact values. The Gibbs sampler recovers the known ground truth: rules $0$ and $2$ are active with probability $\approx1.0$, and the inactive rules are pruned (inclusion probability $\approx0.004$), matching the exact posterior to a maximum absolute difference of $8\times10^{-4}$. The BMA predictive distribution also agrees with the exact model-averaged predictive (maximum absolute mean difference $0.006$; median relative predictive-variance difference $2.5\%$). This confirms the arithmetic of the inclusion full conditional and the BMA construction against exact computation, complementing the fixed-activation check of the main text.
+
+\begin{table}[htbp]
+\centering
+\caption{Synthetic validation of the $\gamma_j$ update of the main text: posterior inclusion probabilities, Gibbs sampler vs exact model averaging over all $2^R$ configurations ($n=600$, $d=2$, $R=5$; ground-truth active rules $\{0,2\}$).}
+\label{tab:synthetic}
+\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+Rule & 0 & 1 & 2 & 3 & 4 \\
+\midrule
+Gibbs & $1.0000$ & $0.0044$ & $1.0000$ & $0.0017$ & $0.0034$ \\
+Exact & $1.0000$ & $0.0044$ & $1.0000$ & $0.0019$ & $0.0026$ \\
+\midrule
+$|$Gibbs$-$Exact$|$ & $0.0000$ & $0.0000$ & $0.0000$ & $0.0002$ & $0.0008$ \\
 \bottomrule
 \end{tabular}
 \end{table}
