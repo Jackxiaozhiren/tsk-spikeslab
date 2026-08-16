@@ -1,7 +1,7 @@
 # Editorial Manager — Information Sciences 投稿 checklist
 
 > 依据：`INS_review/P0_standards_refresh.md`（P0 标准档案）+ `INS_review/P4_终审报告.md`。
-> 生成：2026-08-16。**P5 语言润色后刷新：2026-08-16 15:54**（manuscript/supplementary/cover_letter PDF 与 `ins_latex_source.zip` 均已重建为润色版；zip 已实测自含可编译，四件套 0 errors/undefined，manuscript 23 页）。门户：`editorialmanager.com/ins`（⚠️ 当前显示「Site under development」横幅，**投稿前从期刊官网「Submit your article」按钮进入确认实际门户**）。
+> 生成：2026-08-16。**P5 语言润色后刷新：2026-08-16 16:20**（manuscript/supplementary/cover_letter PDF 与 `ins_latex_source.zip` 均已重建；**采用 `final` 期刊版式：无行号、标题单次、ORCID 显示完整数字 0009-0008-2164-4557**；zip 已实测自含可编译，四件套 0 errors/undefined，manuscript 17 页、supplementary 5 页）。门户：`editorialmanager.com/ins`（⚠️ 当前显示「Site under development」横幅，**投稿前从期刊官网「Submit your article」按钮进入确认实际门户**）。
 
 ## 0. 投稿前必核（人工，无法自动化）
 - [x] **EiC 名单**：现为 Sabrina Senatore + Zheng Yan（投稿信已致此二人）；投稿时从期刊官网编委页最终确认
@@ -14,7 +14,7 @@
 
 | 项 | 文件 | 状态 |
 |---|---|---|
-| Manuscript（PDF） | `submission_package/manuscript.pdf`（23 页 A4，0 errors/undefined） | ✅ |
+| Manuscript（PDF） | `submission_package/manuscript.pdf`（17 页 A4，final 版式，0 errors/undefined） | ✅ |
 | LaTeX 源码包（.zip，无子文件夹） | `submission_package/ins_latex_source.zip`（manuscript.tex / references.bib / supplementary.tex / highlights.tex / cover_letter.tex + 6 图，顶层平铺；已测自含可编译） | ✅ |
 | Highlights（单独文件，final-files 阶段必需） | `submission_package/Highlights.txt` + `Highlights.docx`（5 条 ≤85 字符） | ✅ |
 | Figures（6 张单独） | `submission_package/figures/fig1..fig6.pdf`（纯矢量 PDF，dpi 达标） | ✅ |
