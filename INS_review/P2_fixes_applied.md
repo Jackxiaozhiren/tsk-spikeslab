@@ -1,60 +1,96 @@
-# Phase 2 修复日志（Critical + High 逐项闭环）
+# Phase 2 · 修复日志（IS 标准偏离项 A/B 类立即修复）
 
-生成时间：2026-08-14
-范围：仅 Critical + High（Medium/Low 留待后续 Phase）。所有改动已通过 `latexmk` 编译验证（manuscript 与 supplementary 均 exit 0、无错误）。
-
-> 注：仓库目录在会话中被重命名 `ASC论文` → `IS论文`（与转投 Information Sciences 一致），本日志路径以新目录 `IS论文/` 为准。
-
----
-
-## 🔴 Critical
-
-### C1 · spread 描述统一为「逐簇标准差 × s」
-- **改动**（manuscript.tex 三处）：
-  - §3.1 eq:membership（L89）：`spreads $s_{ji}$ set to the standard deviation of the training points assigned to each cluster, scaled by a factor $s$`
-  - Algorithm 1（L102）：`per-cluster standard deviations from training points, scaled by $s$`
-  - §Setup（L156）：`per-cluster standard deviation of training points, scaled by $s=1.5$`
-- **依据**：`src/tsk_core.py:140-148` 实际实现 `spreads[j] = per_cluster_std * s + 0.01`（默认 s=1.5）。原两处描述（常数 1.5 / 纯逐簇标准差）各自只对一半，现已统一。
-
-### C2 · supplementary 期刊 + 标题 + 全部旧内容重写
-- `\journal{Applied Soft Computing}` → `\journal{Information Sciences}`
-- 标题改为正文标题的「Supplementary Material for …」
-- references.bib 头注释同步改为新标题
-- 整份 supplementary 按新正文（2 数据集 / 4 方法 + SSVS）重写（见 H10）
+生成时间：2026-08-15
+依据：`INS_standard_align_fix_optimize_prompt.md` §5 种子清单（A1–A6 / B1–B5），本次会话确定性核验 + 六路联网检索结论。
+范围：仅「修复偏离」，不做整体优化（Phase 3 待用户指令）。所有改动已 `latexmk -pdf` 编译验证（四件套均 exit 0、0 errors、0 undefined）。
 
 ---
 
-## 🟠 High
+## A. 格式 / 投稿包层
 
-| # | 问题 | 改动 | 文件:行 |
-|---|------|------|---------|
-| H1 | 零统计检验 | 新增 paired Wilcoxon signed-rank 结果（p 值），引用 `wilcoxon1945individual`；表 caption 与正文措辞改为定量 | manuscript.tex §Results/L179、caption/L183 |
-| H2 | Highlights PICP 0.92 | 改 0.94–0.95 | highlights.tex L20 |
-| H3 | 贡献#1 "+0.30 to +0.53" | 改 "+0.10 to +0.53 across three targets" | manuscript.tex L48 |
-| H4 | "three benchmarks" | 改 "two UCI benchmarks (three regression targets)"；L48/L230 同步 "three targets" | manuscript.tex L48/L156/L230 |
-| H5 | "six orders" | 改 "three orders of magnitude" | manuscript.tex L232 |
-| H6 | "widely-copied"/"common implementation" | 软化/删除，改为 "an implementation we encountered while reproducing published TSK baselines" | manuscript.tex L40/L94、cover_letter.tex L24 |
-| H7 | jantre2025spike DOI 失效 | DOI 改 `10.1109/TNNLS.2024.3485529` | references.bib |
-| H8 | neuralnet2024sparsetsk DOI 指向错误论文 | 作者改 Ji/Fan/Dong/Liu，pages 106599，DOI `10.1016/j.neunet.2024.106599`，标题补全 | references.bib |
-| H9 | BIC 法名与代码名脱节 | 方法定义处加 "(labeled `SpikeSlab-Fast` in the released code)"，Gibbs/SSVS 同步 | manuscript.tex L158 |
-| H10 | supplementary 5 处旧内容 | 整份重写：删 TSK-LASSO/Facebook/Air Quality/旧 τ² 表；MAE 表、SSVS τ² 表（0.1–100）、噪声消融表均从 `tier1_v2/tier2_tau2_v2/tier3_noise_v2.json` 重新计算 | supplementary.tex |
-| H11 | "depressed every TSK baseline" | 改 "depressed the dense TSK baselines to varying degrees" | manuscript.tex L48 |
+### A1 · review 模式补行号 ✅
+- **改动**：`manuscript.tex` preamble 加 `\usepackage{lineno}` + `\linenumbers`（elsarticle review 选项不自动加行号，elsdoc v3.5 已确认）。
+- **验证**：lineno.sty 加载成功；PDF 首页 margin 行号（3、4…）可见；稿件 19 页。
+- **影响**：审稿友好，符合官方模板对 review 模式的建议。
+
+### A2 · Highlights 第 4 条去缩写 "TSK" ✅
+- **改动**：`highlights.tex` 第 4 条 `understated TSK accuracy` → `depressed fuzzy-system accuracy`（Elsevier Highlights 规范禁缩写/术语）。
+- **字符数**：68（≤85 ✓）。
+
+### A3 · Highlights 第 3 条去 em-dash 写法 ✅
+- **改动**：`worthwhile---and when it is not` → `worthwhile and when it is not`（避免 `---` 排版冗余）。
+- **字符数**：71（≤85 ✓）。
+- **新 highlights 字符集**：75 / 80 / 71 / 68 / 64。
+
+### A4 · bib key 更名（误导性 key）✅
+- **改动**：`references.bib` `ieeeaccess2024interpretable` → `li2025gaussiancentralized`（元数据正确但 key 误标 IEEE Access 2024，实为 IEEE Trans. Fuzzy Systems 2025）；`manuscript.tex` `\cite` 同步。
+- **验证**：全文无旧 key 残留。
+
+### A5 · Highlights 纯文本版（Editorial Manager 上传用）✅
+- **新增**：`Highlights.txt`（5 条内容与 highlights.tex 同步），EM 上传时以 item type「Highlights」提交。
+
+### A6 · Abstract 词数出处矛盾（200 vs 300）✅ 已记录
+- **记录**：官方 Guide for Authors 两出处分别读「≤200 词」与「≤300 词」，同份 Scribd 存档（2025-08-10 抓取）。当前摘要 **154 词，两种口径均达标**，不改内容；投稿前在 ScienceDirect 活页复核一次即可。
 
 ---
 
-## 关键科学发现（H1 的诚实处理）
+## B. 内容 / 科学层
 
-对 30 splits 跑 paired Wilcoxon signed-rank（R² 与 RMSE）后，结果比原文的「statistically indistinguishable」更微妙：
+### B1 · 「Exact」术语显式定义 ✅
+- **改动**：`manuscript.tex` §3.4（L140）在「we sample it exactly with a block-Gibbs sampler」后加一句：
+  > Here ``exact'' means that we target the posterior by sampling rather than replacing it with a BIC-plus-Laplace analytical surrogate; as with any MCMC procedure the estimates carry finite Monte Carlo error, which we quantify with the convergence diagnostics of Section~\ref{sec:setup}.
+- **目的**：预判审稿人挑战「MCMC 何来 exact」；用已入文的 R-hat/ESS 诊断支撑该声明。
 
-- **BIC 近似法**显著劣于所有方法（全部 target 上 p<0.001）——这是干净的正结果，已写入正文。
-- **TSK-LS vs Bayesian-TSK / Gibbs**：Energy 两目标不显著（p≥0.07）；**Concrete 上名义显著（p<0.01）但效应量可忽略（ΔR²<0.01）**。
+### B2 · Related Work 补引最贴近先例 + 解析近似失效理论谱系 ✅
+- **新增 6 条 bib**（`references.bib`，总数 25 → **31**）：
+  1. `liu2017bayesianzero` — Bayesian zero-order TSK（Applied Soft Computing 2017）
+  2. `miskony2018predictionintervals` — PI via ANFIS（Applied Soft Computing 2018）
+  3. `gelfand1994bayesian` — Bayesian model choice exact vs asymptotic（JRSS-B 1994）
+  4. `chipman2001practical` — Practical implementation of Bayesian model selection（IMS 2001）
+  5. `kasprzak2025laplace` — Laplace 近似误差界（JMLR 2025）
+  6. `vovk2005algorithmic` — Conformal prediction（Springer 2005）
+- **正文引用**（`manuscript.tex`）：
+  - §2.1：零阶贝叶斯 TSK 与 ANFIS 预测区间先例 + 一句「均未做稀疏高阶后件模型平均」区分；
+  - §2.2：「解析近似失效」理论谱系（gelfand/chipman/kasprzak）；
+  - §2.2 末：conformal 回应 + hedged 新颖性（见 B3/B4）。
+- **验证**：31 条 bib 全部被正文引用（0 未引条目）；bbl 含全部新 key；编译 0 undefined。
 
-正文已按此诚实表述：「not significantly worse on the Energy targets (p≥0.07); on Concrete the residual difference is nominally significant (p<0.01) but negligible in magnitude (ΔR²<0.01)」，而非继续写"indistinguishable"。
+### B3 · 回应 conformal prediction（防御性一句）✅
+- **改动**：§2.2 末加一句——conformal 需单独校准集、且不把预测方差分解为噪声 + 模型选择分量，本文 BMA 显式传播后者。
 
-## 遗留事项（非 Critical/High，记录备查）
+### B4 · hedged 新颖性陈述（"to our knowledge"）✅
+- **改动**：
+  - `manuscript.tex` §2.2 末：`...BMA-calibrated prediction intervals, which to our knowledge has not been developed for linear-consequent rule models...`；
+  - `cover_letter.tex` Contribution 段：`To our knowledge, no prior work provides exact spike-and-slab posterior sampling with BMA-calibrated prediction intervals for linear-consequent rule models; our method fills this gap.`
+- **依据**：六路检索确认无先例（arXiv API 双查询 0 命中 + 多轮 web 检索），但仍用 hedged 措辞（遵守「first 裸声明」诚信教训）。
+- **同步**：cover letter `References: 25` → `References: 31`。
 
-1. **`demsar2006statistical` 仍未引用**：现有 `fig5_cd_diagram`（Nemenyi CD 图）是旧版（7 方法 × 5 数据集，含 Facebook/Air Quality），**不能复用**。跨数据集 CD 图属 Phase 8 重绘任务，届时再引 demsar2006。
-2. **20 条未引用 bib 条目**（K7）仍在 references.bib，属 Phase 5 清理/补引。
-3. **孤儿图 14 个文件**（旧图族）仍在 `results/figures/`，属 Phase 8 清理。
-4. **Medium/Low 项**（如 "dense baselines are strong" 过强、single-target 推广、cover letter "first exact" 声明等）留待 Phase 3/4 处理。
-5. **PDF 需重新编译**：manuscript.pdf / supplementary.pdf / highlights.pdf / cover_letter.pdf 当前仍是改动前的旧版本，需 `latexmk -pdf` 重新生成。
+---
+
+## C. 残留风险（仅记录，不重做）
+
+| # | 风险 | 级别 | 状态 |
+|---|---|---|---|
+| C-A | 缺 ANFIS / IT2-FLS / 近期稀疏模糊基线实测 | Medium | 已用 GP 外部概率基线 + Related Work 一句「为何不适用」缓解；本次未补实测 |
+| C-B | 稀疏机制 d=8 / d=81 均不赢 | Medium | 靠「sparsity design criterion + 诚实边界」回答 |
+| C-C | generality 只 hedge 未演示 | Low | 不重做 |
+| C-D | 作者 Biography ≤100 词 + 证件照：**检索未确认 IS 硬性要求** | 待活页 | 活页若要求，终稿阶段补 |
+
+---
+
+## 验证汇总
+
+| 项 | 结果 |
+|---|---|
+| 四件套编译 | manuscript / supplementary / highlights / cover_letter 全部 exit 0、0 errors、0 undefined |
+| 摘要词数 | 154（未改动） |
+| Highlights 字符 | 75 / 80 / 71 / 68 / 64（≤85 ✓） |
+| 引用 | 31 条全部被引；bbl 含全部新 key |
+| 行号 | PDF margin 行号渲染 ✓ |
+| 页数 | manuscript 19 页（远低于 40 页上限） |
+
+## 未做（待 Phase 3 或用户决策）
+- 整体叙事/语言/图表优化（Phase 3）
+- 补 ANFIS/IT2-FLS 实测基线（C-A）
+- conformal 对照实验升级（B3 目前为文本回应）
+- git commit（等用户确认）

@@ -156,7 +156,7 @@ Full BIC baseline (as implemented)   & $-2.53$ & $0.00$ & $9.9$ \\
 
 \section{MCMC Convergence Diagnostics}
 
-Table~\ref{tab:mcmc} reports multi-chain convergence diagnostics for the rule-level Gibbs sampler (TSK-SpikeSlab-Gibbs) on a representative split of two targets. Three chains are run with independent seeds ($42$, $123$, $456$), each with $1{,}000$ burn-in and $2{,}000$ retained draws. The Gelman--Rubin statistic satisfies $\hat{R}\le1.01$ for the inclusion indicators ($\boldsymbol{\gamma}$), the consequents ($\boldsymbol{\beta}$), and the noise variance ($\sigma^2$), and the effective sample size equals the full chain length for $\boldsymbol{\gamma}$ and exceeds $1{,}700$ for $\sigma^2$, indicating well-mixed chains. On Concrete the inclusion indicators are deterministically active (posterior inclusion probability $=1.0$ for every rule), so the $\boldsymbol{\gamma}$ chain is constant; the $\boldsymbol{\beta}$ and $\sigma^2$ chains mix as above.
+Table~\ref{tab:mcmc} reports multi-chain convergence diagnostics for the rule-level Gibbs sampler (TSK-SpikeSlab-Gibbs) on a representative split of two targets. Three chains are run with independent seeds ($42$, $123$, $456$), each with $1{,}000$ burn-in and $2{,}000$ retained draws. The Gelman--Rubin statistic satisfies $\hat{R}\le1.01$ for the inclusion indicators ($\boldsymbol{\gamma}$), the consequents ($\boldsymbol{\beta}$), and the noise variance ($\sigma^2$), and the effective sample size equals the full chain length for $\boldsymbol{\gamma}$ and exceeds $1{,}700$ for $\sigma^2$, indicating well-mixed chains. On Concrete the inclusion indicators are deterministically active (posterior inclusion probability $=1.0$ for every rule), so the $\boldsymbol{\gamma}$ chain is constant; the $\boldsymbol{\beta}$ and $\sigma^2$ chains mix as above. Diagnostics are reported for the rule-level sampler; on these benchmarks the $\boldsymbol{\gamma}$ chains of the coefficient-level SSVS also saturate near full activation, so we expect qualitatively similar mixing, but we do not claim formal convergence verification for those runs.
 
 \begin{table}[htbp]
 \centering
@@ -184,15 +184,15 @@ Table~\ref{tab:highdim} tests the sparsity boundary on a real high-dimensional r
 \caption{High-dimensional sparsity boundary on Superconductivity (mean $\pm$ std over $30$ splits; subsample $n=3000$, $d=81$, $R=5$). PICP is the $95\%$ interval coverage; MPIW is the mean prediction-interval width.}
 \label{tab:highdim}
 \footnotesize
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Method & RMSE & $R^2$ & PICP \\
+Method & RMSE & $R^2$ & PICP & MPIW \\
 \midrule
-TSK-LS (dense)              & $15.46{\pm}0.82$ & $+0.792{\pm}0.024$ & -- \\
-Bayesian-TSK (dense conjugate) & $15.33{\pm}0.77$ & $+0.795{\pm}0.023$ & $0.921$ \\
-TSK-SpikeSlab-Gibbs         & $15.37{\pm}0.70$ & $+0.794{\pm}0.021$ & $0.940$ \\
-TSK-SSVS ($\tau^2=1$)       & $19.35{\pm}0.56$ & $+0.674{\pm}0.018$ & $0.940$ \\
-TSK-SSVS ($\tau^2=10$)      & $16.48{\pm}0.55$ & $+0.763{\pm}0.018$ & $0.935$ \\
+TSK-LS (dense)              & $15.46{\pm}0.82$ & $+0.792{\pm}0.024$ & -- & -- \\
+Bayesian-TSK (dense conjugate) & $15.33{\pm}0.77$ & $+0.795{\pm}0.023$ & $0.921$ & $55.6$ \\
+TSK-SpikeSlab-Gibbs         & $15.37{\pm}0.70$ & $+0.794{\pm}0.021$ & $0.940$ & $59.7$ \\
+TSK-SSVS ($\tau^2=1$)       & $19.35{\pm}0.56$ & $+0.674{\pm}0.018$ & $0.940$ & $75.1$ \\
+TSK-SSVS ($\tau^2=10$)      & $16.48{\pm}0.55$ & $+0.763{\pm}0.018$ & $0.935$ & $65.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}

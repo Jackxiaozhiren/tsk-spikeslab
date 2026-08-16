@@ -17,13 +17,13 @@ We submit our manuscript entitled ``Exact Bayesian Inference for Spike-and-Slab 
 
 \noindent\textbf{Contribution and Novelty}
 
-This paper presents exact Bayesian inference for spike-and-slab priors in Takagi--Sugeno--Kang (TSK) fuzzy systems, delivering calibrated model-averaged prediction intervals. Whereas prior work has coupled TSK systems either with conjugate priors without sparsity, or with frequentist $L_1$ regularization without uncertainty, we place a spike-and-slab prior on the rule consequents and perform posterior inference by block-Gibbs sampling with Bayesian model averaging (BMA). The method applies to any rule-based regression with linear consequents; TSK fuzzy systems are the concrete instantiation. Three results structure the contribution.
+This paper presents exact Bayesian inference for spike-and-slab priors in Takagi--Sugeno--Kang (TSK) fuzzy systems, delivering calibrated model-averaged prediction intervals. Whereas prior work has coupled TSK systems either with conjugate priors without sparsity, or with frequentist $L_1$ regularization without uncertainty, we place a spike-and-slab prior on the rule consequents and perform posterior inference by block-Gibbs sampling with Bayesian model averaging (BMA). The method applies to any rule-based regression with linear consequents; TSK fuzzy systems are the concrete instantiation. To our knowledge, no prior work provides exact spike-and-slab posterior sampling with BMA-calibrated prediction intervals for linear-consequent rule models; our method fills this gap. Three results structure the contribution.
 
-\textbf{First}, we provide the exact MCMC machinery: a block-Gibbs sampler whose full conditional for each rule's inclusion indicator is obtained in $\mathcal{O}(n(d+1)^2)$ time via the matrix-determinant and Woodbury identities, together with a BMA predictive distribution whose variance decomposes into aleatoric and model-uncertainty terms by the law of total variance. This yields well-calibrated 95\% prediction intervals (PICP $=0.94$--$0.95$) where a BIC-plus-Laplace analytical approximation undercovers (PICP $=0.00$--$0.18$). We trace the failure to the hard-thresholding step and the collapse of the Laplace covariance, providing a constructive diagnosis of when analytical approximations to Bayesian model selection are safe---a question of direct interest to the uncertainty-quantification community.
+\textbf{First}, we provide the exact MCMC machinery: a block-Gibbs sampler whose full conditional for each rule's inclusion indicator is obtained in $\mathcal{O}(n(d+1)^2)$ time via the matrix-determinant and Woodbury identities, together with a BMA predictive distribution whose variance decomposes into aleatoric and model-uncertainty terms by the law of total variance. This yields near-nominal 95\% prediction intervals (PICP $=0.93$--$0.95$) where a BIC-plus-Laplace analytical approximation undercovers (PICP $=0.00$--$0.18$). We trace the failure to the hard-thresholding step and the collapse of the Laplace covariance, providing a constructive diagnosis of when analytical approximations to Bayesian model selection are safe---a question of direct interest to the uncertainty-quantification community.
 
-\textbf{Second}, we document and correct a silent membership-function implementation bug in which fuzzy-set spreads are recomputed from test data at prediction time, corrupting every TSK baseline. Correcting it raises the dense TSK least-squares baseline from $R^2=0.41$ to $0.94$ on the energy-cooling target. Because this implementation pattern is one we encountered while reproducing published TSK baselines, we release the corrected code and baselines as a reproducibility benchmark.
+\textbf{Second}, we document and correct a silent membership-function implementation bug in which fuzzy-set spreads are recomputed from test data at prediction time, corrupting every TSK baseline. Correcting it raises the dense TSK least-squares baseline from $R^2=0.41$ to $0.94$ on the Energy-Cooling target. Because this implementation pattern is one we encountered while reproducing published TSK baselines, we release the corrected code and baselines as a reproducibility benchmark.
 
-\textbf{Third}, we characterize the boundary conditions of sparsity: under correct fuzzy $c$-means, neither rule-level nor coefficient-level sparsity beats the dense baseline on the low-dimensional building-energy domain. We report this as an honest boundary result, delineating precisely the regime in which sparsity-inducing priors earn their cost.
+\textbf{Third}, we characterize the boundary conditions of sparsity: under correct fuzzy $c$-means, neither rule-level nor coefficient-level sparsity beats the dense baseline on the low-dimensional building-energy domain. We report this as a boundary result, delineating precisely the regime in which sparsity-inducing priors earn their cost.
 
 \noindent\textbf{Journal Fit}
 
@@ -34,7 +34,7 @@ This manuscript's core contribution is a general methodology for calibrated Baye
 \begin{itemize}
 \item Figures: 6 (main text)
 \item Tables: 1 (main text)
-\item References: 25
+\item References: 38
 \item Code and corrected baselines: \url{https://github.com/Jackxiaozhiren/tsk-spikeslab} (persistent DOI: \href{https://doi.org/10.5281/zenodo.21929319}{10.5281/zenodo.21929319})
 \end{itemize}
 

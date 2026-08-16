@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Generate figures for the reframed paper:
-"Correct Bayesian Inference for TSK Fuzzy Systems: a Reproducibility Fix and
-Calibrated Model-Averaged Prediction Intervals."
+"""Generate figures for the Information Sciences submission:
+"Exact Bayesian Inference for Spike-and-Slab Priors in Takagi--Sugeno--Kang
+Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals."
 
-Reads the corrected results (tier1/tier2/tier3_v2.json) and produces:
+Reads the corrected results (tier1/tier2/tier3_v2.json + gp_baseline.json) and produces:
   fig1_repro_fix.pdf       — the membership-bug reproducibility fix (before/after R^2)
-  fig2_main_comparison.pdf — R^2 across 3 datasets / 6 methods
-  fig3_calibration.pdf     — PICP (with nominal-95% reference)
-  fig4_sparsity_boundary.pdf — tau2 sensitivity + noise regime (no free lunch)
+  fig2_main_comparison.pdf — R^2 across 3 targets / 7 methods (with per-split spread)
+  fig3_calibration.pdf     — PICP (with nominal-95% reference and Gaussian process)
+  fig4_sparsity_boundary.pdf — tau2 sensitivity + noise regime
 """
 
 import json
@@ -39,6 +39,18 @@ COLORS = {
     "SpikeSlab-Gibbs": "#2CA02C",
     "RandomForest": "#9B59B6",
     "SVR": "#95A5A6",
+    "GaussianProcess": "#E69F00",
+}
+
+# Paper method names for figure legends (code keys -> manuscript terminology)
+LABELS = {
+    "TSK-LS": "TSK-LS",
+    "Bayesian-TSK": "Bayesian-TSK",
+    "SpikeSlab-Fast": "TSK-SpikeSlab-BIC",
+    "SpikeSlab-Gibbs": "TSK-SpikeSlab-Gibbs",
+    "RandomForest": "Random Forest",
+    "SVR": "SVR",
+    "GaussianProcess": "Gaussian Process",
 }
 
 DATASETS = ["Energy-Heating", "Energy-Cooling", "Concrete"]
@@ -60,6 +72,7 @@ def _mean_std(rows, key):
 tier1 = json.load(open(os.path.join(RAW_DIR, "tier1_v2.json")))
 tier2 = json.load(open(os.path.join(RAW_DIR, "tier2_tau2_v2.json")))
 tier3 = json.load(open(os.path.join(RAW_DIR, "tier3_noise_v2.json")))
+gp = json.load(open(os.path.join(RAW_DIR, "gp_baseline.json")))
 
 # ---- R^2 values reported in the REJECTED manuscript (buggy baselines) ----
 REPORTED_R2 = {
@@ -105,24 +118,30 @@ plt.savefig(os.path.join(FIG_DIR, "fig1_repro_fix.png"), bbox_inches="tight")
 plt.close()
 
 # ============================================================
-# FIGURE 2: Main comparison (R^2 across 3 datasets / 6 methods)
+# FIGURE 2: Main comparison (R^2 across 3 datasets / 7 methods, with spread)
 # ============================================================
 print("Figure 2: main comparison ...")
-fig, ax = plt.subplots(figsize=(9.5, 5))
+fig, ax = plt.subplots(figsize=(10.5, 5))
 x = np.arange(len(DATASETS))
-w = 0.13
-for j, mname in enumerate(METHOD_ORDER):
-    vals = [_mean(tier1[ds][mname], "R2") for ds in DATASETS]
-    off = (j - len(METHOD_ORDER) / 2 + 0.5) * w
-    ax.bar(x + off, vals, w, color=COLORS[mname], edgecolor="white",
-           linewidth=0.4, label=mname)
+METHOD_ORDER_FULL = METHOD_ORDER + ["GaussianProcess"]
+w = 0.11
+for j, mname in enumerate(METHOD_ORDER_FULL):
+    if mname == "GaussianProcess":
+        vals = [_mean(gp[ds], "R2") for ds in DATASETS]
+        errs = [_mean_std(gp[ds], "R2")[1] for ds in DATASETS]
+    else:
+        vals = [_mean(tier1[ds][mname], "R2") for ds in DATASETS]
+        errs = [_mean_std(tier1[ds][mname], "R2")[1] for ds in DATASETS]
+    off = (j - len(METHOD_ORDER_FULL) / 2 + 0.5) * w
+    ax.bar(x + off, vals, w, yerr=errs, capsize=1.5, color=COLORS[mname],
+           edgecolor="white", linewidth=0.4, label=LABELS[mname])
 ax.axhline(0, color="black", linewidth=0.8)
 ax.set_xticks(x)
 ax.set_xticklabels(DATASETS, fontsize=11)
 ax.set_ylabel("$R^2$")
 ax.set_title("Predictive accuracy across datasets", fontweight="bold")
 ax.set_ylim(-7.0, 1.15)
-ax.legend(fontsize=9.5, ncol=3, loc="lower left", framealpha=0.9)
+ax.legend(fontsize=9, ncol=4, loc="lower left", framealpha=0.9)
 ax.grid(axis="y", alpha=0.3)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "fig2_main_comparison.pdf"), bbox_inches="tight")
@@ -133,15 +152,18 @@ plt.close()
 # FIGURE 3: Calibration (PICP vs nominal 95%)
 # ============================================================
 print("Figure 3: calibration ...")
-fig, ax = plt.subplots(figsize=(8, 4.8))
-methods_cal = ["Bayesian-TSK", "SpikeSlab-Gibbs", "SpikeSlab-Fast"]
+fig, ax = plt.subplots(figsize=(8.5, 4.8))
+methods_cal = ["Bayesian-TSK", "SpikeSlab-Gibbs", "GaussianProcess", "SpikeSlab-Fast"]
 x = np.arange(len(DATASETS))
-w = 0.24
+w = 0.19
 for j, mname in enumerate(methods_cal):
-    vals = [_mean(tier1[ds][mname], "PICP") for ds in DATASETS]
+    if mname == "GaussianProcess":
+        vals = [_mean(gp[ds], "PICP") for ds in DATASETS]
+    else:
+        vals = [_mean(tier1[ds][mname], "PICP") for ds in DATASETS]
     off = (j - len(methods_cal) / 2 + 0.5) * w
     bars = ax.bar(x + off, vals, w, color=COLORS[mname], edgecolor="white",
-                  linewidth=0.4, label=mname)
+                  linewidth=0.4, label=LABELS[mname])
     for b, v in zip(bars, vals):
         ax.annotate(f"{v:.2f}", (b.get_x() + b.get_width() / 2, v),
                     ha="center", va="bottom", fontsize=8.5)
@@ -151,7 +173,7 @@ ax.set_xticklabels(DATASETS, fontsize=11)
 ax.set_ylabel("PICP (coverage)")
 ax.set_title("Prediction-interval calibration", fontweight="bold")
 ax.set_ylim(0, 1.12)
-ax.legend(fontsize=10, framealpha=0.9, loc="lower left")
+ax.legend(fontsize=9.5, framealpha=0.9, loc="lower left")
 ax.grid(axis="y", alpha=0.3)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "fig3_calibration.pdf"), bbox_inches="tight")
@@ -199,7 +221,7 @@ ax.set_ylim(0.75, 1.0)
 ax.legend(fontsize=9.5, framealpha=0.9, loc="lower left")
 ax.grid(alpha=0.3)
 
-fig.suptitle("Sparsity gives no free lunch under correct FCM", fontweight="bold",
+fig.suptitle("Sparsity boundary under correct fuzzy c-means", fontweight="bold",
              y=1.02)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "fig4_sparsity_boundary.pdf"), bbox_inches="tight")
