@@ -1,6 +1,6 @@
-# Exact Bayesian Spike-and-Slab Inference for TSK Fuzzy Systems
+# Exact Bayesian Inference for Spike-and-Slab Priors in TSK Fuzzy Systems
 
-Companion code for *"Exact Bayesian Spike-and-Slab Inference for Takagi--Sugeno--Kang Fuzzy Systems with Calibrated Model-Averaged Prediction Intervals"*.
+Companion code for *"Exact Bayesian Inference for Spike-and-Slab Priors in Takagi--Sugeno--Kang Fuzzy Systems with Approximately Calibrated Model-Averaged Prediction Intervals"*.
 
 ## Reproducing the results
 
