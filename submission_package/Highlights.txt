@@ -1,0 +1,9 @@
+Highlights
+
+Manuscript: Exact Bayesian Inference for Spike-and-Slab Priors in Takagi--Sugeno--Kang Fuzzy Systems with Approximately Calibrated Model-Averaged Prediction Intervals
+
+- Exact Bayesian inference yields near-nominal intervals for rule-based models.
+- Model averaging fixes the undercoverage of approximate Bayesian model selection.
+- Clarifies when sparse model selection is worthwhile and when it is not.
+- Corrected a membership bug that had depressed fuzzy-system accuracy.
+- Code and corrected baselines released for reproducible research.

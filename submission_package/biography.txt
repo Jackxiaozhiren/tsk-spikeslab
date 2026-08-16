@@ -1,0 +1,25 @@
+Biography (author vitae) — Information Sciences submission
+============================================================
+
+IS requires a short biography (maximum 100 words) and a passport-type photo
+per author, in an editable format (e.g., Word), uploaded at the final-files
+stage. DRAFT below — please verify/complete position, degree, and any
+publications before submission.
+
+--------------------------------------------------------------------------
+DRAFT (58 words):
+
+Zhiren Xiao is a researcher at Guangdong University of Finance, Guangzhou,
+China. His research interests lie in Takagi–Sugeno–Kang fuzzy systems,
+Bayesian inference, uncertainty quantification, and interpretable machine
+learning, with emphasis on exact posterior sampling, calibrated prediction
+intervals for rule-based regression models, and reproducible computational
+intelligence.
+
+--------------------------------------------------------------------------
+TO COMPLETE:
+- Position/degree (e.g., "Master's student", "Lecturer", ...)  -> confirm
+- Any notable publications / projects                          -> optional
+- Passport-type photograph (Word, editable format)             -> upload
+
+Word count of draft: 58 (<=100 OK)
