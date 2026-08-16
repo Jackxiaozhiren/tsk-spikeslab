@@ -36,7 +36,7 @@
 
 ## 4. 声明与政策
 - 单盲评审（作者身份保留）；≥2 审稿人；SSRN 预印本可选（desk 通过后公开）。
-- 引用诚信：39 条引用 CrossRef 验真通过（Phase 2 修复 fragoso/lei DOI 错配）；新颖性 2026-08 arXiv 复核仍成立。
+- 引用诚信：**37 条引用 CrossRef + 联网全部验真通过（2026-08-16 复核）**；修正 7 处引用元数据错误（xue2023dgaletsk 作者/页码、lei2018distributionfree 缺 2 作者、zhang2023sparse 作者顺序、bian2025mhtsk 作者/标题、liu2017bayesianzero 作者/页码、khosravi 页码、pineau 标题）；删 2 条低贡献引用（heliyon2024early、khosravi2011comprehensive）；无杜撰引用。新颖性 2026-08 arXiv 复核仍成立。
 - Generative AI 声明已含（Claude 用于代码辅助与语言编辑）。
 
 ## 5. 提交后预期

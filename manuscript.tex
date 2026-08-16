@@ -50,7 +50,7 @@ uncertainty quantification \sep prediction intervals \sep Bayesian inference \se
 
 Predictive models in engineering increasingly need more than point estimates: designers require calibrated uncertainty to support decisions under limited data.
 Rule-based regressions with linear consequents---of which Takagi--Sugeno--Kang (TSK) fuzzy systems \cite{takagi1985fuzzy} are a canonical instance---are attractive here: they combine nonlinear approximation with a compact, interpretable architecture.
-Their linear consequents also make Bayesian treatment especially natural, yielding posterior distributions, prediction intervals, and principled model selection. Building-energy simulation exemplifies the data regime that motivates this work: each simulation run is computationally expensive, yielding training sets of only hundreds of samples \cite{tsanas2012accurate,heliyon2024early}.
+Their linear consequents also make Bayesian treatment especially natural, yielding posterior distributions, prediction intervals, and principled model selection. Building-energy simulation exemplifies the data regime that motivates this work: each simulation run is computationally expensive, yielding training sets of only hundreds of samples \cite{tsanas2012accurate}.
 
 The Bayesian TSK literature has been hampered by two problems. The first is methodological.
 Spike-and-slab priors \cite{mitchell1988bayesian,george1993variable} place positive probability on exact zero coefficients.
@@ -85,7 +85,7 @@ Section~\ref{sec:related} reviews related work. Section~\ref{sec:method} present
 \subsection{Bayesian TSK Fuzzy Systems}
 
 Gu and colleagues introduced Bayesian TSK classifiers with conjugate Gaussian--Wishart priors \cite{gu2017bayesian}, later extended to joint structure identification \cite{gu2018bayesian}, imbalanced classification \cite{gu2017imbalanced}, and probabilistic Gaussian centralization \cite{li2025gaussiancentralized}.
-A zero-order Bayesian TSK variant is studied in \cite{liu2017bayesianzero}, prediction intervals for adaptive neuro-fuzzy inference systems have been constructed through interval-network training in \cite{miskony2018predictionintervals}, evolving fuzzy systems maintain interval predictions in nonstationary environments \cite{cartagena2024evolving}, and interval-construction methods for neural predictors are surveyed in \cite{khosravi2011comprehensive}.
+A zero-order Bayesian TSK variant is studied in \cite{liu2017bayesianzero}, prediction intervals for adaptive neuro-fuzzy inference systems have been constructed through interval-network training in \cite{miskony2018predictionintervals}, and evolving fuzzy systems maintain interval predictions in nonstationary environments \cite{cartagena2024evolving}.
 None of these targets sparse high-order consequents through posterior model averaging. These frameworks provide full posterior uncertainty estimates (posterior variances and prediction intervals) but employ non-sparsity-inducing priors, so every rule remains active regardless of relevance \cite{wang2021bayesian}. Our work builds directly on this line: the dense conjugate posterior (Section~\ref{sec:conj}) is the natural non-sparsity-inducing reference against which sparse Bayesian variants should be judged, and we use it to validate our MCMC implementation.
 
 \subsection{Sparse TSK and Bayesian Variable Selection}
