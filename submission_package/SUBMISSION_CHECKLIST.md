@@ -4,10 +4,10 @@
 > 生成：2026-08-16。门户：`editorialmanager.com/ins`（⚠️ 当前显示「Site under development」横幅，**投稿前从期刊官网「Submit your article」按钮进入确认实际门户**）。
 
 ## 0. 投稿前必核（人工，无法自动化）
-- [ ] **EiC 名单**：现为 Sabrina Senatore + Zheng Yan（投稿信已致此二人）；从期刊官网编委页最终确认
+- [x] **EiC 名单**：现为 Sabrina Senatore + Zheng Yan（投稿信已致此二人）；投稿时从期刊官网编委页最终确认
 - [ ] **Biography**：≤100 词 + 证件照（Word 可编辑）——见 `biography.txt` 草稿，补全后上传
-- [ ] **建议审稿人编委身份**：Denoeux / Kumbasar / Pal 三人核实非 IS 编委、非近 3 年合作者
-- [ ] **EM 门户入口**：editorialmanager.com/ins 横幅 → 从官网确认实际投稿入口
+- [x] **建议审稿人编委身份**：已联网检索，**无证据表明 Denoeux / Kumbasar / Pal 任一为 IS 编委**（Denoeux 关联 IJAR 等刊、Kumbasar/Pal 仅曾在 IS 发文）；三人异地（法国/土耳其/印度）、与作者无合著；投稿时仍建议从编委页最终扫一遍
+- [x] **EM 门户**：Elsevier 当前机制为「期刊主页 → Submit your article」进入（submit.elsevier.com 为新式 EM）；`editorialmanager.com/ins` 仍显示「Site under development」横幅——投稿时从官网按钮进入，勿直接用 EM 旧地址
 - [ ] Abstract 词数口径（200 vs 300）以投稿时官网为准（当前 185 词，两种口径均达标）
 
 ## 1. 上传文件清单（Editorial Manager）
