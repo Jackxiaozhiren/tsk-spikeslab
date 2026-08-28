@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite this repository release and, once published, the associated article."
+title: "Exact Bayesian Inference for Spike-and-Slab Priors in TSK Fuzzy Systems"
+type: software
+version: 1.0.0
+authors:
+  - family-names: Xiao
+    given-names: Zhiren
+repository-code: "https://github.com/Jackxiaozhiren/tsk-spikeslab"
+url: "https://github.com/Jackxiaozhiren/tsk-spikeslab"
+license: BSD-3-Clause
+abstract: "Companion implementation for Bayesian spike-and-slab inference and model-averaged prediction intervals in Takagi--Sugeno--Kang fuzzy systems."
+keywords:
+  - Bayesian inference
+  - spike-and-slab
+  - fuzzy systems
+  - TSK
+  - model averaging
+  - prediction intervals
