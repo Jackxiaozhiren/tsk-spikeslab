@@ -19,10 +19,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-FIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "results", "figures")
-RAW_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "results", "raw")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUTPUT_ROOT = os.environ.get(
+    "TSK_OUTPUT_DIR",
+    os.path.join(PROJECT_ROOT, "rebuild_results_2026-08-29_v1"),
+)
+FIG_DIR = os.path.join(OUTPUT_ROOT, "figures")
+RAW_DIR = os.path.join(OUTPUT_ROOT, "raw")
+os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(FIG_DIR, exist_ok=True)
 
 plt.rcParams.update({

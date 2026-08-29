@@ -24,7 +24,8 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
 from tsk_core import (
     load_energy, load_concrete, get_splits, compute_metrics,
-    TSK_SpikeSlab_Gibbs, DATA_DIR, SEED,
+    TSK_SpikeSlab_Gibbs, OUTPUT_DIR, SEED,
+    gaussian_membership_predict, tsk_phi, tsk_weights,
 )
 
 N_SPLITS = 30
@@ -44,8 +45,11 @@ def _rhat(chains):
     W = C.var(axis=1, ddof=1).mean(axis=0)    # within-chain (dim,)
     B = C.mean(axis=1).var(axis=0, ddof=1) * n  # between (dim,)
     var_hat = (n - 1) / n * W + B / n
-    W = np.maximum(W, 1e-16)
-    return np.sqrt(var_hat / W)
+    rhat = np.empty_like(W)
+    constant = W <= 1e-16
+    rhat[constant] = np.where(B[constant] <= 1e-16, 1.0, np.inf)
+    rhat[~constant] = np.sqrt(var_hat[~constant] / W[~constant])
+    return rhat
 
 
 def _ess(x):
@@ -80,8 +84,9 @@ def run_mcmc_diagnostics():
         tr, te = splits[0]
         sc = StandardScaler()
         Xtr = sc.fit_transform(X[tr])
+        Xte = sc.transform(X[te])
         ytr = y[tr]
-        chains_gamma, chains_beta, chains_s2 = [], [], []
+        chains_gamma, chains_beta, chains_s2, chains_pred = [], [], [], []
         for chain_seed in [42, 123, 456]:
             t0 = time.time()
             m = TSK_SpikeSlab_Gibbs(k=5, pi=0.5, tau2=1e3,
@@ -89,12 +94,18 @@ def run_mcmc_diagnostics():
             chains_gamma.append(m.gamma_samples_)     # (2000, R)
             chains_beta.append(m.beta_samples_)       # (2000, P)
             chains_s2.append(m.sigma2_samples_)       # (2000,)
+            mu_te = gaussian_membership_predict(
+                Xte, m.ctr_, m.spreads_, m.k
+            )
+            Phi_te = tsk_phi(tsk_weights(mu_te), Xte)[0]
+            chains_pred.append((Phi_te @ m.beta_samples_.T).T)
             print(f"  {ds_name} chain seed={chain_seed}: "
                   f"mean PIP={m.pip_.mean():.3f} ({time.time()-t0:.0f}s)")
 
         rhat_gamma = _rhat(chains_gamma)              # (R,)
         rhat_beta = _rhat(chains_beta)                # (P,)
         rhat_s2 = _rhat([c for c in chains_s2])       # (1,)
+        rhat_pred = _rhat(chains_pred)                # (n_test,)
 
         # ESS on gamma (averaged over rules and chains)
         ess_gamma = np.mean([[_ess(ch[:, j]) for j in range(ch.shape[1])]
@@ -107,6 +118,8 @@ def run_mcmc_diagnostics():
             "rhat_beta_median": float(np.median(rhat_beta)),
             "rhat_beta_max": float(rhat_beta.max()),
             "rhat_sigma2": float(rhat_s2[0]),
+            "rhat_predictive_median": float(np.median(rhat_pred)),
+            "rhat_predictive_max": float(rhat_pred.max()),
             "ess_gamma_mean": float(ess_gamma),
             "ess_sigma2_mean": float(ess_s2),
             "n_chains": 3, "n_burn": 1000, "n_samples": 2000,
@@ -115,9 +128,11 @@ def run_mcmc_diagnostics():
         print(f"  -> Rhat gamma max={rec['rhat_gamma_max']:.3f} | "
               f"Rhat beta median={rec['rhat_beta_median']:.3f} max={rec['rhat_beta_max']:.3f} | "
               f"Rhat sigma2={rec['rhat_sigma2']:.3f} | "
+              f"Rhat predictive median={rec['rhat_predictive_median']:.3f} max={rec['rhat_predictive_max']:.3f} | "
               f"ESS gamma={rec['ess_gamma_mean']:.0f} sigma2={rec['ess_sigma2_mean']:.0f}")
 
-    with open(os.path.join(DATA_DIR, "mcmc_diagnostics.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "mcmc_diagnostics.json"), "w") as f:
         json.dump(out, f, indent=2)
     return out
 
@@ -158,7 +173,8 @@ def run_gp_baseline():
         p = np.mean([r["PICP"] for r in rows]); w = np.mean([r["MPIW"] for r in rows])
         print(f"  {ds_name:<16} RMSE={rm:.3f}  R2={r2:+.3f}  "
               f"PICP={p:.3f}  MPIW={w:.2f}  ({time.time()-t0:.0f}s)")
-    with open(os.path.join(DATA_DIR, "gp_baseline.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "gp_baseline.json"), "w") as f:
         json.dump({k: v for k, v in out.items()}, f, indent=2, default=float)
     return out
 
@@ -166,4 +182,4 @@ def run_gp_baseline():
 if __name__ == "__main__":
     run_mcmc_diagnostics()
     run_gp_baseline()
-    print("\n\nE2/E3 complete. Results in", DATA_DIR)
+    print("\n\nE2/E3 complete. Results in", OUTPUT_DIR)

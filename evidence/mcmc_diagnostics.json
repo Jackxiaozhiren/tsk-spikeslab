@@ -1,0 +1,42 @@
+{
+  "Energy-Cooling": {
+    "rhat_gamma": [
+      1.0,
+      0.9999706361403817,
+      1.0,
+      1.0,
+      0.9999861480632024
+    ],
+    "rhat_gamma_max": 1.0,
+    "rhat_beta_median": 1.0000262043157624,
+    "rhat_beta_max": 1.060882950587297,
+    "rhat_sigma2": 1.0008649686781987,
+    "rhat_predictive_median": 0.9999442287705841,
+    "rhat_predictive_max": 1.003540503420959,
+    "ess_gamma_mean": 1966.7532019321486,
+    "ess_sigma2_mean": 1639.5213056854755,
+    "n_chains": 3,
+    "n_burn": 1000,
+    "n_samples": 2000
+  },
+  "Concrete": {
+    "rhat_gamma": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "rhat_gamma_max": 1.0,
+    "rhat_beta_median": 1.0012747992513937,
+    "rhat_beta_max": 1.0301546979822636,
+    "rhat_sigma2": 0.9999157611144902,
+    "rhat_predictive_median": 1.001018859044557,
+    "rhat_predictive_max": 1.0266204006293933,
+    "ess_gamma_mean": 2000.0,
+    "ess_sigma2_mean": 1740.2690489700751,
+    "n_chains": 3,
+    "n_burn": 1000,
+    "n_samples": 2000
+  }
+}

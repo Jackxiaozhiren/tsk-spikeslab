@@ -1,47 +1,79 @@
-# Exact Bayesian Inference for Spike-and-Slab Priors in TSK Fuzzy Systems
+# Bayesian TSK Fuzzy Regression — ASOC Reproducibility Materials
 
-Companion code for *"Exact Bayesian Inference for Spike-and-Slab Priors in Takagi--Sugeno--Kang Fuzzy Systems with Approximately Calibrated Model-Averaged Prediction Intervals"*.
+Reproducibility repository for the Applied Soft Computing manuscript:
 
-## Reproducing the results
+**Correctness and Predictive Uncertainty in Bayesian TSK Fuzzy Regression: A Reproducible Evaluation of Spike-and-Slab Model Averaging**
+
+## Current manuscript-active state
+
+This `v2.0.0` line supersedes the earlier Information Sciences-era `v1.0` snapshot for the current ASOC manuscript. The historical release remains available for provenance, but it is **not** the evidence source for the ASOC results.
+
+The rebuilt protocol corrects implementation details in fuzzy c-means, training-time membership handling, linear-consequent fitting, Bayesian posterior calculations, and posterior-predictive interval construction. The scientific conclusion is intentionally narrow: rule-level spike-and-slab model averaging is reproducible and diagnostically useful, but this study does not establish an accuracy or calibration advantage over dense TSK references.
+
+### Frozen headline results
+
+Across 30 fixed 80/20 splits:
+
+| Target | TSK-LS R² | Gibbs/BMA R² | Gibbs PICP | GP R² |
+| --- | ---: | ---: | ---: | ---: |
+| Energy-Heating | 0.9570 | 0.9567 | 0.9399 | 0.9978 |
+| Energy-Cooling | 0.9229 | 0.9224 | 0.9338 | 0.9794 |
+| Concrete | 0.7859 | 0.7840 | 0.9379 | 0.8891 |
+
+Additional frozen diagnostics include:
+
+- repaired BIC-ablation R² values of 0.9372 / 0.9338 / 0.9325 / 0.9307;
+- raw coefficient \(\hat R_{max}\) of 1.061 and 1.030 for the two representative Gibbs diagnostics, so the release does **not** claim universal chain convergence;
+- finite synthetic-enumeration discrepancies of 0.0261 (max PIP), 0.0224 (max BMA mean), and 0.0027 (median relative predictive-variance difference);
+- a high-dimensional probe where no stable sparsity advantage is established under the tested protocol.
+
+## Repository map
+
+- `src/` — corrected TSK/Bayesian/Gibbs implementation and rebuild scripts.
+- `tests/` — 30 correctness/regression tests.
+- `evidence/` — 11 frozen structured JSON result artifacts plus their SHA-256 manifest. Execution `.log` traces remain local audit material and are not part of the public release.
+- `tables/` and `figures/` — manuscript-active artifacts generated from the frozen evidence.
+- `manuscript.tex`, `supplementary.tex`, `references.bib` — ASOC-aligned source snapshot.
+- `docs/CLAIM_EVIDENCE_MAP.md` — claim-to-evidence boundary.
+- `docs/REPRODUCIBILITY.md` — reproducibility and environment guidance.
+- `PUBLIC_RELEASE_MANIFEST.md` — public/private artifact boundary.
+
+## Quick verification
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-python src/experiment_v2.py
-python src/figures_v2.py
+pip install -r requirements-ci.txt
+python -m compileall -q src tests tools
+pytest -q
+python tools/verify_frozen_results.py
 ```
 
-All experiments use a fixed random seed (`SEED = 42`). Data are the UCI Energy Efficiency (id 242) and Concrete Compressive Strength (id 165) benchmarks, fetched via `ucimlrepo`.
+The clean release candidate passes **30/30 tests**. CI also verifies the frozen structured-result checksums and the deterministic Git-tracked release manifest.
 
-## Method name mapping
+## Regenerating tables and figures from frozen evidence
 
-| Manuscript name | Code class / result key |
-|-----------------|-------------------------|
-| TSK-LS | `TSK_LS` |
-| Bayesian-TSK | `TSK_Bayesian` (conjugate Gaussian--inverse-gamma) |
-| TSK-SpikeSlab-BIC | `TSK_SpikeSlab_Fast` (BIC + Laplace approximation; key `SpikeSlab-Fast`) |
-| TSK-SpikeSlab-Gibbs | `TSK_SpikeSlab_Gibbs` (rule-level block-Gibbs + BMA; key `SpikeSlab-Gibbs`) |
-| TSK-SSVS | `TSK_SSVS_Gibbs` (coefficient-level SSVS; key `SSVS-Gibbs`) |
+```bash
+python src/generate_phase6_artifacts.py --output-dir /tmp/asoc_artifacts
+```
 
-## Repository structure
+The generator reads `evidence/main_rebuilt.json` and the associated frozen JSON files when a fresh rebuild directory is not present.
 
-- `src/tsk_core.py` — TSK core implementation, fuzzy c-means, frozen training-time membership spreads, conjugate and Gibbs samplers;
-- `src/experiment_v2.py` — main comparison, tau-squared sensitivity, and noise ablation;
-- `src/figures_v2.py` — figure generation;
-- `results/raw/` — per-split result files and data caches used by the released workflow;
-- `results/figures/` — generated figures;
-- `manuscript.tex`, `references.bib` — manuscript source retained for traceability;
-- `docs/REPRODUCIBILITY.md` — environment and archival-release guidance.
+## Full rebuild boundary
 
-## Reproducibility boundary
+The manuscript-active results were rebuilt from corrected code using UCI Energy Efficiency (dataset 242), Concrete Compressive Strength (dataset 165), and the explicitly labeled Superconductivity (dataset 464) high-dimensional probe. Public raw/cache `.npz` files are deliberately excluded from this repository. Obtain source data from UCI and run the relevant scripts under `src/`.
 
-`requirements.txt` is a compatibility specification with lower-bound versions; it is not an exact historical environment lock. For the manuscript archival release, export the exact package environment from the machine/container used for the final manuscript run rather than reconstructing or guessing versions later. The archival release should also record the exact commit SHA, dataset identifiers, seed, output checksums, and the mapping between manuscript tables/figures and generated files.
+The observed manuscript-workstation environment is recorded in `docs/ENVIRONMENT_OBSERVED_2026-08-29.txt`. `requirements.txt` remains a compatibility specification rather than a claim of bit-identical results across hardware and library versions.
+
+## Version history
+
+- `v1.0` — historical Information Sciences-era snapshot and earlier Zenodo archive.
+- `v2.0.0` — ASOC-aligned corrected implementation, rebuilt evidence, tests, and manuscript-active artifacts.
 
 ## Citation
 
-Use GitHub's **Cite this repository** function, generated from `CITATION.cff`, to cite the software repository. Once the associated article is formally published, the citation metadata can be updated with the article as the preferred citation.
+Use GitHub's **Cite this repository** metadata from `CITATION.cff`. The historical Zenodo DOI `10.5281/zenodo.21929319` corresponds to the earlier snapshot; a new version-specific Zenodo DOI should be used for the ASOC-aligned `v2.0.0` snapshot once deposited.
 
 ## License
 
-The source code is released under the BSD 3-Clause License. Third-party datasets and dependencies remain subject to their original terms.
+BSD 3-Clause for project-authored code and documentation. Third-party datasets remain subject to their original terms.

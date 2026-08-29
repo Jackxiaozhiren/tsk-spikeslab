@@ -1,10 +1,7 @@
-# Data Availability
+# Data and Code Availability
 
-The experiments use public benchmark datasets obtained through `ucimlrepo`:
+The main benchmark datasets are public UCI Machine Learning Repository datasets: Energy Efficiency (dataset 242) and Concrete Compressive Strength (dataset 165). The high-dimensional sensitivity probe uses Superconductivity (dataset 464).
 
-- UCI Energy Efficiency, dataset id 242;
-- UCI Concrete Compressive Strength, dataset id 165.
+This repository does not redistribute raw UCI downloads or cached `.npz` arrays. The ASOC-aligned code, tests, frozen aggregate/split-level metric evidence, tables, figures, and reproducibility documentation are intended to be frozen in GitHub release `v2.0.0`.
 
-The repository does not claim ownership of these datasets. Their availability and reuse are governed by the UCI Machine Learning Repository and the individual dataset terms.
-
-For the manuscript archival release, record the dataset identifiers, retrieval date, preprocessing path, and any provider metadata necessary to identify the exact inputs used. If cached copies are included, do so only when redistribution terms permit it and record checksums.
+The existing Zenodo DOI `10.5281/zenodo.21929319` corresponds to the historical `v1.0` snapshot. It should not be cited as the evidence package for the ASOC-aligned result set. After `v2.0.0` is published, create a new Zenodo version and use that version-specific DOI in the final journal manuscript.

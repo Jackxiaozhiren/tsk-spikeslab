@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\centering
+\caption{Main comparison. Values are means over the 30 outer 80/20 splits. RMSE is on the original target scale; PICP is the empirical coverage of the 95\% posterior-predictive interval when available.}
+\label{tab:main}
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccc|ccc|ccc}
+\toprule
+& \multicolumn{3}{c|}{Energy-Heating} & \multicolumn{3}{c|}{Energy-Cooling} & \multicolumn{3}{c}{Concrete} \\
+Method & $R^2$ & RMSE & PICP & $R^2$ & RMSE & PICP & $R^2$ & RMSE & PICP \\
+\midrule
+TSK-LS & 0.957 & 2.025 & -- & 0.923 & 2.599 & -- & 0.786 & 7.694 & -- \\
+Bayesian-TSK & 0.957 & 2.030 & 0.940 & 0.923 & 2.602 & 0.932 & 0.786 & 7.696 & 0.938 \\
+TSK-SpikeSlab-BIC & 0.956 & 2.044 & 0.940 & 0.922 & 2.614 & 0.934 & 0.786 & 7.695 & 0.938 \\
+TSK-SpikeSlab-Gibbs & 0.957 & 2.033 & 0.940 & 0.922 & 2.607 & 0.934 & 0.784 & 7.732 & 0.938 \\
+Random Forest & 0.998 & 0.488 & -- & 0.969 & 1.663 & -- & 0.903 & 5.180 & -- \\
+SVR & 0.925 & 2.729 & -- & 0.892 & 3.093 & -- & 0.643 & 9.967 & -- \\
+Gaussian Process & 0.998 & 0.470 & 0.931 & 0.979 & 1.353 & 0.938 & 0.889 & 5.535 & 0.939 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

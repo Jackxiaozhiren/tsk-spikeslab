@@ -1,0 +1,25 @@
+\begin{table}[htbp]
+\centering
+\caption{Posterior-predictive metrics for methods that produce probabilistic intervals. WIS and CRPS are unavailable for the conformal baseline because it does not define a posterior-predictive distribution.}
+\label{tab:predictive}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llrrrr}
+\toprule
+Target & Method & PICP & MPIW & WIS & CRPS \\
+\midrule
+Energy-Heating & Bayesian-TSK & 0.940 & 8.164 & 0.938 & 1.129 \\
+Energy-Heating & TSK-SpikeSlab-BIC & 0.940 & 8.151 & 0.944 & 1.138 \\
+Energy-Heating & TSK-SpikeSlab-Gibbs & 0.940 & 8.180 & 0.939 & 1.132 \\
+Energy-Heating & Gaussian Process & 0.931 & 1.748 & 0.210 & 0.252 \\
+Energy-Cooling & Bayesian-TSK & 0.932 & 10.270 & 1.203 & 1.442 \\
+Energy-Cooling & TSK-SpikeSlab-BIC & 0.934 & 10.248 & 1.205 & 1.445 \\
+Energy-Cooling & TSK-SpikeSlab-Gibbs & 0.934 & 10.295 & 1.203 & 1.443 \\
+Energy-Cooling & Gaussian Process & 0.938 & 5.175 & 0.597 & 0.706 \\
+Concrete & Bayesian-TSK & 0.938 & 28.943 & 3.505 & 4.248 \\
+Concrete & TSK-SpikeSlab-BIC & 0.938 & 28.894 & 3.505 & 4.249 \\
+Concrete & TSK-SpikeSlab-Gibbs & 0.938 & 29.148 & 3.518 & 4.261 \\
+Concrete & Gaussian Process & 0.939 & 20.457 & 2.447 & 2.946 \\
+\bottomrule
+\end{tabular}
+\end{table}

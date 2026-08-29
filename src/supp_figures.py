@@ -24,11 +24,11 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
 from tsk_core import (
-    load_energy, get_splits, TSK_Bayesian, TSK_SpikeSlab_Gibbs, SEED,
+    load_energy, get_splits, TSK_Bayesian, TSK_SpikeSlab_Gibbs,
+    OUTPUT_DIR, SEED,
 )
 
-FIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "results", "figures")
+FIG_DIR = os.path.join(OUTPUT_DIR, "figures")
 os.makedirs(FIG_DIR, exist_ok=True)
 
 Xe, y_heat, y_cool = load_energy()
