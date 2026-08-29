@@ -15,7 +15,8 @@ This major release freezes the Applied Soft Computing manuscript-active state an
 ## Reproducibility changes
 
 - 30 correctness/regression tests;
-- original frozen-result SHA-256 manifest preserved and checked;
+- 11 structured frozen-result JSON artifacts protected by SHA-256 checksums;
+- execution `.log` traces kept as local audit history rather than public release evidence;
 - public raw `.npz` caches and historical submission/result trees removed from the active branch;
 - deterministic Git release manifest and CI verification;
 - exact observed rebuild environment documented separately from compatibility requirements.
