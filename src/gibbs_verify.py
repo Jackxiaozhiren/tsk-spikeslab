@@ -22,7 +22,7 @@ from sklearn.metrics import r2_score
 
 from tsk_core import (
     load_energy, fcm, gaussian_membership_fit, gaussian_membership_predict,
-    tsk_phi, tsk_weights, TSK_Bayesian,
+    tsk_phi, tsk_weights, TSK_Bayesian, SIGMA2_A0, SIGMA2_B0,
 )
 
 TRIAL_SEED = 3
@@ -35,14 +35,18 @@ def _phi(X_fit, X_query, R):
     return tsk_phi(tsk_weights(mu_q), X_query)[0]
 
 
-def conjugate_predictive(Xtr, ytr, Xte, R, tau2=1e3, a0=0.01, b0=0.01):
+def conjugate_predictive(
+    Xtr, ytr, Xte, R, tau2=1e3,
+    a0=SIGMA2_A0, b0=SIGMA2_B0,
+):
     n = len(ytr)
     P = R * (Xtr.shape[1] + 1)
     Phi_tr = _phi(Xtr, Xtr, R)
     Phi_te = _phi(Xtr, Xte, R)
     prec_prior = np.eye(P) / tau2
     prec_post = Phi_tr.T @ Phi_tr + prec_prior
-    cov_post = np.linalg.inv(prec_post)
+    cov_post = np.linalg.solve(prec_post, np.eye(P))
+    cov_post = 0.5 * (cov_post + cov_post.T)
     mean_post = cov_post @ (Phi_tr.T @ ytr)
     resid = ytr - Phi_tr @ mean_post
     a_n = a0 + n / 2
@@ -61,7 +65,7 @@ def gibbs_forced_active(Xtr, ytr, Xte, R, tau2=1e3, n_burn=3000, n_samples=30000
     Ajs = [Phi_tr[:, j * pp:(j + 1) * pp].T @ Phi_tr[:, j * pp:(j + 1) * pp] for j in range(R)]
     beta = np.linalg.lstsq(Phi_tr, ytr, rcond=None)[0]
     resid = ytr - Phi_tr @ beta
-    sigma2 = float(np.var(resid))
+    sigma2 = max(float(np.var(resid)), 1e-4)
     rng = np.random.RandomState(seed)
     B = np.zeros((n_samples, P))
     S2 = np.zeros(n_samples)
@@ -70,14 +74,19 @@ def gibbs_forced_active(Xtr, ytr, Xte, R, tau2=1e3, n_burn=3000, n_samples=30000
             Phi_j = Phi_tr[:, j * pp:(j + 1) * pp]
             sl = slice(j * pp, (j + 1) * pp)
             r = resid + Phi_j @ beta[sl]
-            Vj = np.linalg.inv(Ajs[j] / sigma2 + np.eye(pp) / tau2 + 1e-10 * np.eye(pp))
+            post_precision = Ajs[j] + np.eye(pp) / tau2
+            Vj = sigma2 * np.linalg.solve(
+                post_precision, np.eye(pp)
+            )
             Vj = 0.5 * (Vj + Vj.T)
-            mj = Vj @ (Phi_j.T @ r) / sigma2
+            mj = np.linalg.solve(post_precision, Phi_j.T @ r)
             beta[sl] = mj + np.linalg.cholesky(Vj) @ rng.standard_normal(pp)
             resid = r - Phi_j @ beta[sl]
         ssr = resid @ resid
-        a_post = 0.01 + len(ytr) / 2
-        b_post = 0.01 + 0.5 * ssr
+        a_post = SIGMA2_A0 + (len(ytr) + P) / 2
+        b_post = SIGMA2_B0 + 0.5 * (
+            ssr + (beta @ beta) / tau2
+        )
         sigma2 = 1.0 / rng.gamma(a_post, 1.0 / b_post)
         if it >= n_burn:
             B[it - n_burn] = beta

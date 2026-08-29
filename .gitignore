@@ -1,5 +1,8 @@
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
 .DS_Store
 *.aux
 *.bbl
@@ -11,3 +14,6 @@ __pycache__/
 *.spl
 *.synctex.gz
 manuscript_backup_*.tex
+results/raw/
+*.npz
+RELEASE_MANIFEST.sha256.tmp

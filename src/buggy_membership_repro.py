@@ -27,7 +27,7 @@ from tsk_core import (
     load_energy, load_concrete, get_splits, compute_metrics,
     gaussian_membership_fit, gaussian_membership_predict,
     tsk_phi, tsk_weights, TSK_LS, TSK_Bayesian,
-    DATA_DIR, SEED,
+    OUTPUT_DIR, SEED,
 )
 
 N_SPLITS = 30
@@ -87,9 +87,10 @@ def main():
         for meth in ["TSK-LS", "Bayesian-TSK"]:
             r2 = np.mean([r["R2"] for r in rows[meth]])
             print(f"  {name:14s} {meth:12s} buggy R^2 = {r2:.4f}")
-    with open(os.path.join(DATA_DIR, "buggy_baselines.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "buggy_baselines.json"), "w") as f:
         json.dump(out, f, indent=2, default=float)
-    print("wrote results/raw/buggy_baselines.json")
+    print("wrote", os.path.join(OUTPUT_DIR, "buggy_baselines.json"))
 
 
 if __name__ == "__main__":

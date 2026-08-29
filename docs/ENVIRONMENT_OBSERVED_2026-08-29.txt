@@ -1,0 +1,17 @@
+# Observed ASOC rebuild environment — 2026-08-29
+# Evidence snapshot from the protected rebuild workflow; not a transitive lockfile.
+
+Platform: Apple arm64; macOS 26.6.2; Darwin 25.6.0
+Git: 2.50.1
+Python: 3.9.6
+pip: 26.0.1
+pytest: 8.4.2
+NumPy: 1.26.4
+SciPy: 1.13.1
+scikit-learn: 1.6.1
+Matplotlib: 3.9.4
+ucimlrepo: 0.0.7
+pandas: 2.3.3
+TeX: pdfTeX / TeX Live 2026; latexmk 4.88
+
+The public CI intentionally uses Python 3.11 as a compatibility check. The observed environment above records the manuscript rebuild workstation rather than promising bit-identical cross-platform reproduction.

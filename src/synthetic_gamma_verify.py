@@ -24,7 +24,8 @@ from scipy.special import logsumexp
 
 from tsk_core import (
     fcm, gaussian_membership_fit, gaussian_membership_predict,
-    tsk_phi, tsk_weights, TSK_SpikeSlab_Gibbs, DATA_DIR,
+    tsk_phi, tsk_weights, TSK_SpikeSlab_Gibbs, OUTPUT_DIR,
+    SIGMA2_A0, SIGMA2_B0,
 )
 
 R = 5
@@ -53,30 +54,38 @@ def build_synthetic():
     return X, y, Phi, pp, ctr, spr
 
 
-def exact_marginal_logp(y, Phi_g, sigma2, tau2=TAU2):
-    """log p(y | gamma, sigma2) = log N(y; 0, sigma2 I + tau2 Phi_g Phi_g^T).
+def exact_marginal_logp(y, Phi_g, sigma2, tau2=None):
+    """log p(y | gamma, sigma2) under the scaled conjugate prior.
 
-    Woodbury identities with A = Phi_g^T Phi_g / sigma2 + I / tau2:
-      det(sigma2 I + tau2 Phi Phi^T) = sigma2^n * tau2^p * det(A)
-      y^T (sigma2 I + tau2 Phi Phi^T)^{-1} y
-          = (y.y)/sigma2 - (Phi^T y)^T A^{-1} (Phi^T y) / sigma2^2
+    The model is beta | sigma2, gamma=1 ~ N(0, sigma2*tau2*I).
+    Woodbury identities give
+      Sigma_gamma = sigma2 * (I + tau2 Phi Phi^T)
+      y^T Sigma_gamma^{-1} y
+        = (y.y - tau2*(Phi^T y)^T
+           (I + tau2 Phi^T Phi)^{-1}(Phi^T y)) / sigma2.
     """
+    if tau2 is None:
+        tau2 = TAU2
     n = len(y)
     G = Phi_g.T @ Phi_g
-    A = G / sigma2 + np.eye(G.shape[0]) / tau2
-    _, logdetA = np.linalg.slogdet(A)
-    logdetS = n * np.log(sigma2) + G.shape[0] * np.log(tau2) + logdetA
+    S = np.eye(G.shape[0]) + tau2 * G
+    _, logdetS0 = np.linalg.slogdet(S)
+    logdetS = n * np.log(sigma2) + logdetS0
     yG = Phi_g.T @ y
-    quad_form = (y @ y) / sigma2 - (yG @ np.linalg.solve(A, yG)) / sigma2 ** 2
+    quad_form = (
+        y @ y - tau2 * (yG @ np.linalg.solve(S, yG))
+    ) / sigma2
     return -0.5 * (n * np.log(2 * np.pi) + logdetS + quad_form)
 
 
-def exact_inclusion_probs(Phi, pp, y):
+def exact_inclusion_probs(Phi, pp, y, tau2=None, pi=None):
     """Exact posterior inclusion probabilities via 2^R enumeration.
 
     Integrates sigma2 out over InvGamma(0.01, 0.01) by Gauss-Legendre in log
     space, then weights configurations by pi^{|g|} (1-pi)^{R-|g|} p(y|g).
     """
+    tau2 = TAU2 if tau2 is None else tau2
+    pi = PRIOR_PI if pi is None else pi
     R_ = R
     logw = np.zeros(1 << R_)
     active_sets = []
@@ -84,13 +93,15 @@ def exact_inclusion_probs(Phi, pp, y):
     t = 5.0 * nodes                      # t in [-5, 5]  ->  sigma2 in [e^-5, e^5]
     sg = np.exp(t)
     wg = weights * 5.0 * sg              # dx/dt weight
-    a0 = b0 = 0.01
+    a0, b0 = SIGMA2_A0, SIGMA2_B0
     for code in range(1 << R_):
         act = [j for j in range(R_) if (code >> j) & 1]
         active_sets.append(act)
         Phi_g = Phi[:, [j * pp + c for j in act for c in range(pp)]] if act else Phi[:, :0]
         if act:
-            vals = np.array([exact_marginal_logp(y, Phi_g, s) for s in sg])
+            vals = np.array([
+                exact_marginal_logp(y, Phi_g, s, tau2=tau2) for s in sg
+            ])
             vals += -b0 / sg - (a0 + 1.0) * np.log(sg)   # InvGamma prior
             logw[code] = logsumexp(vals + np.log(wg))    # integrate sigma2
         else:                                            # gamma = 0 config: y ~ N(0, s^2 I)
@@ -98,7 +109,7 @@ def exact_inclusion_probs(Phi, pp, y):
             vals += -b0 / sg - (a0 + 1.0) * np.log(sg)
             logw[code] = logsumexp(vals + np.log(wg))
         k = len(act)
-        logw[code] += k * np.log(PRIOR_PI) + (R_ - k) * np.log(1 - PRIOR_PI)
+        logw[code] += k * np.log(pi) + (R_ - k) * np.log(1 - pi)
     logw -= logsumexp(logw)              # normalize
     w = np.exp(logw)
     pip = np.zeros(R_)
@@ -133,25 +144,31 @@ def main():
     means = Phi_te @ B.T                       # (n, n_samples)
     mean_g = means.mean(axis=1)
     var_g = S2.mean() + means.var(axis=1)      # aleatoric + model uncertainty
-    # exact BMA predictive: E[y*|y] = sum_g w(g) mean_post(g); Var via total variance
+    # Exact BMA predictive under the same normal-inverse-gamma prior.
     mean_exact = np.zeros(N)
     var_exact = np.zeros(N)
     yg = y
+    a_n = SIGMA2_A0 + N / 2
     for code, act in enumerate(active_sets):
         Phi_g = Phi[:, [j * pp + c for j in act for c in range(pp)]] if act else Phi[:, :0]
         if act:
             G = Phi_g.T @ Phi_g
-            A = G / SIGMA2_TRUE + np.eye(G.shape[0]) / TAU2
-            mpost = np.linalg.solve(A, Phi_g.T @ yg) / SIGMA2_TRUE
+            P = G + np.eye(G.shape[0]) / TAU2
+            mpost = np.linalg.solve(P, Phi_g.T @ yg)
             mean_c = Phi_te[:, [j * pp + c for j in act for c in range(pp)]] @ mpost
-            # predictive var under config (sigma2 fixed): s2 + Phi C Phi^T
-            C = np.linalg.inv(A) / SIGMA2_TRUE * SIGMA2_TRUE  # (G/s2 + I/tau2)^{-1}
-            var_c = SIGMA2_TRUE + np.einsum("ij,jk,ik->i",
-                                            Phi_te[:, [j * pp + c for j in act for c in range(pp)]],
-                                            C, Phi_te[:, [j * pp + c for j in act for c in range(pp)]])
+            resid = yg - Phi_g @ mpost
+            b_n = SIGMA2_B0 + 0.5 * (
+                resid @ resid + mpost @ mpost / TAU2
+            )
+            C = np.linalg.solve(P, np.eye(P.shape[0]))
+            Phi_te_g = Phi_te[:, [j * pp + c for j in act for c in range(pp)]]
+            var_c = (b_n / (a_n - 1.0)) * (
+                1.0 + np.einsum("ij,jk,ik->i", Phi_te_g, C, Phi_te_g)
+            )
         else:
             mean_c = np.zeros(N)
-            var_c = SIGMA2_TRUE * np.ones(N)
+            b_n = SIGMA2_B0 + 0.5 * (yg @ yg)
+            var_c = (b_n / (a_n - 1.0)) * np.ones(N)
         mean_exact += w[code] * mean_c
         var_exact += w[code] * (var_c + mean_c ** 2)
     var_exact -= mean_exact ** 2
@@ -169,9 +186,10 @@ def main():
         "bma_max_abs_mean_diff": float(d_mean),
         "bma_median_rel_var_diff": float(rel_var),
     }
-    with open(os.path.join(DATA_DIR, "synthetic_gamma_verify.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "synthetic_gamma_verify.json"), "w") as f:
         json.dump(out, f, indent=2)
-    print("wrote results/raw/synthetic_gamma_verify.json")
+    print("wrote", os.path.join(OUTPUT_DIR, "synthetic_gamma_verify.json"))
 
 
 if __name__ == "__main__":

@@ -19,7 +19,8 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from tsk_core import get_splits, compute_metrics, SEED, \
+from phase4_predictive import evaluate_interval_model
+from tsk_core import get_splits, compute_metrics, OUTPUT_DIR, SEED, \
     TSK_LS, TSK_Bayesian, TSK_SpikeSlab_Gibbs, TSK_SSVS_Gibbs
 
 
@@ -51,30 +52,78 @@ def run(X, y, n_splits=30, k=5, out_path=None):
     for name, cls, kw in methods:
         t0 = time.time()
         rows = []
-        for tr, te in splits:
+        for split_idx, (tr, te) in enumerate(splits):
+            started = time.perf_counter()
             sc = StandardScaler()
             Xtr = sc.fit_transform(X[tr]); Xte = sc.transform(X[te])
             ytr, yte = y[tr], y[te]
             m = cls(**kw).fit(Xtr, ytr)
             if cls is TSK_LS:
                 yp = m.predict(Xte)
-                r = compute_metrics(yte, yp)
+                r = {
+                    "RMSE": float(np.sqrt(np.mean((yte - yp) ** 2))),
+                    "MAE": float(np.mean(np.abs(yte - yp))),
+                    "R2": float(1.0 - np.sum((yte - yp) ** 2)
+                                / np.sum((yte - np.mean(yte)) ** 2)),
+                    "PICP": None, "MPIW": None,
+                    "IntervalScore95": None, "Winkler95": None,
+                    "WIS": None, "CRPS": None,
+                    "n_predictive_samples": None,
+                }
             else:
-                yp, yl, yu = m.predict(Xte)
-                r = compute_metrics(yte, yp, yl, yu)
+                r = evaluate_interval_model(
+                    m, Xte, yte,
+                    seed=SEED + 10000 + split_idx,
+                    n_samples=512,
+                )
+            r.update({
+                "split_idx": int(split_idx),
+                "runtime_s": float(time.perf_counter() - started),
+                "active_rules": (
+                    int(m.active_rules)
+                    if hasattr(m, "active_rules") else None
+                ),
+                "active_rule_ratio": (
+                    float(m.active_rules / k)
+                    if hasattr(m, "active_rules") else None
+                ),
+                "ESS_sigma2": None,
+                "ESS_per_s": None,
+                "sparsity_recovery": None,
+            })
+            if hasattr(m, "sigma2_samples_"):
+                from diagnostics_gp import _ess
+                ess = float(_ess(m.sigma2_samples_))
+                r["ESS_sigma2"] = ess
+                r["ESS_per_s"] = ess / max(r["runtime_s"], 1e-12)
             rows.append(r)
         rm = np.mean([r["RMSE"] for r in rows]); r2 = np.mean([r["R2"] for r in rows])
-        pics = [r.get("PICP") for r in rows if r.get("PICP") is not None]
-        mpis = [r.get("MPIW") for r in rows if r.get("MPIW") is not None]
-        p = np.mean(pics) if pics else np.nan
-        w = np.mean(mpis) if mpis else np.nan
+        summary = {}
+        for metric in [
+            "RMSE", "MAE", "R2", "PICP", "MPIW",
+            "IntervalScore95", "Winkler95", "WIS", "CRPS",
+            "active_rule_ratio", "ESS_sigma2", "ESS_per_s",
+        ]:
+            values = [
+                r[metric] for r in rows
+                if r.get(metric) is not None and np.isfinite(r[metric])
+            ]
+            summary[metric] = {
+                "mean": float(np.mean(values)) if values else None,
+                "std": float(np.std(values)) if values else None,
+                "n": len(values),
+            }
         out["methods"][name] = {
-            "RMSE_mean": float(rm), "RMSE_std": float(np.std([r["RMSE"] for r in rows])),
-            "R2_mean": float(r2), "R2_std": float(np.std([r["R2"] for r in rows])),
-            "PICP": float(p), "MPIW": float(w),
+            "rows": rows,
+            "summary": summary,
+            "sparsity_recovery": None,
         }
+        p = summary["PICP"]["mean"]
+        w = summary["MPIW"]["mean"]
+        p_text = f"{p:.3f}" if p is not None else "NA"
+        w_text = f"{w:.2f}" if w is not None else "NA"
         print(f"  {name:<22} RMSE={rm:.3f}  R2={r2:+.3f}  "
-              f"PICP={p:.3f}  MPIW={w:.2f}  ({time.time()-t0:.0f}s)")
+              f"PICP={p_text}  MPIW={w_text}  ({time.time()-t0:.0f}s)")
     if out_path:
         import json
         with open(out_path, "w") as f:
@@ -86,6 +135,6 @@ def run(X, y, n_splits=30, k=5, out_path=None):
 if __name__ == "__main__":
     import os
     X, y = load_superconductivity()
-    out_path = os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), "results", "raw", "highdim_sparsity.json")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    out_path = os.path.join(OUTPUT_DIR, "highdim_sparsity.json")
     run(X, y, n_splits=30, k=5, out_path=out_path)

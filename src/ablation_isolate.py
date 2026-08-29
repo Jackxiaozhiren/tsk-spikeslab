@@ -30,7 +30,7 @@ from sklearn.preprocessing import StandardScaler
 from tsk_core import (
     load_energy, fcm, gaussian_membership_fit, gaussian_membership_predict,
     tsk_phi, tsk_weights, get_splits, compute_metrics,
-    TSK_SpikeSlab_Fast, TSK_SpikeSlab_Gibbs, DATA_DIR,
+    TSK_SpikeSlab_Fast, TSK_SpikeSlab_Gibbs, OUTPUT_DIR,
 )
 
 R = 5
@@ -54,11 +54,20 @@ def threshold_laplace(Phi_tr, Phi_te, ytr, yte, active, tau2=TAU2):
         active = np.ones(R, bool)
     b = np.linalg.lstsq(Phi_tr[:, idx], ytr, rcond=None)[0]
     s2 = max(float(np.var(ytr - Phi_tr[:, idx] @ b)), 1e-4)
-    prec = np.ones(R * pp) * (1.0 / tau2)
-    for j in range(R):
-        if not active[j]:
-            prec[j * pp:(j + 1) * pp] = 1e10
-    cov = s2 * np.linalg.inv(Phi_tr.T @ Phi_tr / s2 + np.diag(prec))
+    cov = np.zeros((R * pp, R * pp))
+    active_idx = [
+        i for j, on in enumerate(active) if on
+        for i in range(j * pp, (j + 1) * pp)
+    ]
+    if active_idx:
+        Phi_active = Phi_tr[:, active_idx]
+        post_precision = (
+            Phi_active.T @ Phi_active + np.eye(len(active_idx)) / tau2
+        )
+        cov_active = s2 * np.linalg.solve(
+            post_precision, np.eye(len(active_idx))
+        )
+        cov[np.ix_(active_idx, active_idx)] = cov_active
     beta = np.zeros(R * pp)
     beta[idx] = b
     mean = Phi_te @ beta
@@ -72,7 +81,8 @@ def run():
     pp = X.shape[1] + 1
     splits = get_splits(y, N_SPLITS)
     out = {v: [] for v in ["R2", "PICP", "MPIW"]}
-    acc = {v: [] for v in ["R2", "PICP", "MPIW"]}
+    bic_threshold = {v: [] for v in ["R2", "PICP", "MPIW"]}
+    gibbs_threshold = {v: [] for v in ["R2", "PICP", "MPIW"]}
 
     for tr, te in splits:
         sc = StandardScaler()
@@ -112,19 +122,21 @@ def run():
         f = TSK_SpikeSlab_Fast(k=R, pi=0.5).fit(Xtr, ytr)
         m, v = threshold_laplace(Phi_tr, Phi_te, ytr, yte, f.pip_ > 0.5)
         r = compute_metrics(yte, m, m - 1.96 * np.sqrt(v), m + 1.96 * np.sqrt(v))
-        for k2 in acc:
-            acc[k2].append(r[k2])
+        for k2 in bic_threshold:
+            bic_threshold[k2].append(r[k2])
 
         # 3. Gibbs-PIP + threshold + Laplace (least-squares fit)
         g = TSK_SpikeSlab_Gibbs(k=R, pi=0.5, tau2=TAU2, n_burn=800, n_samples=800).fit(Xtr, ytr)
         m, v = threshold_laplace(Phi_tr, Phi_te, ytr, yte, g.pip_ > 0.5)
         r = compute_metrics(yte, m, m - 1.96 * np.sqrt(v), m + 1.96 * np.sqrt(v))
-        for k2 in acc:
-            acc[k2].append(r[k2])
+        for k2 in gibbs_threshold:
+            gibbs_threshold[k2].append(r[k2])
 
     result = {
         "BIC-BMA": {v: float(np.mean(out[v])) for v in out},
-        "BIC-PIP-threshold-Laplace": {v: float(np.mean(acc[v])) for v in acc},
+        "BIC-PIP-threshold-Laplace": {
+            v: float(np.mean(bic_threshold[v])) for v in bic_threshold
+        },
         "Gibbs-PIP-threshold-Laplace": {},
     }
     # 3rd variant stored in acc too; recompute cleanly
@@ -157,9 +169,10 @@ def run():
 
     for name, d in result.items():
         print(f"  {name:28s} R2={d['R2']:+.3f}  PICP={d['PICP']:.3f}  MPIW={d['MPIW']:.2f}")
-    with open(os.path.join(DATA_DIR, "ablation_isolate_v2.json"), "w") as fp:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "ablation_isolate_v2.json"), "w") as fp:
         json.dump(result, fp, indent=2)
-    print(f"\nSaved to {DATA_DIR}/ablation_isolate_v2.json")
+    print(f"\nSaved to {OUTPUT_DIR}/ablation_isolate_v2.json")
 
 
 if __name__ == "__main__":

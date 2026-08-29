@@ -31,11 +31,15 @@ hard-discarding rules (accuracy collapse) and Laplace-covariance collapse
 """
 
 import numpy as np
+from scipy.special import expit, ndtr
+from scipy.stats import t as student_t
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
 
 SEED = 42
+SIGMA2_A0 = 0.01
+SIGMA2_B0 = 0.01
 
 
 # ============================================================
@@ -43,7 +47,12 @@ SEED = 42
 # ============================================================
 import os
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results", "raw")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(PROJECT_ROOT, "results", "raw")
+OUTPUT_DIR = os.environ.get(
+    "TSK_OUTPUT_DIR",
+    os.path.join(PROJECT_ROOT, "rebuild_results_2026-08-29_v1"),
+)
 
 
 def _load_cached(name):
@@ -120,7 +129,9 @@ def fcm(X, c, m=2.0, n_init=10, max_iter=100, tol=1e-5, seed=SEED):
                 diff = X - centers[j]
                 dist[j] = np.einsum("ij,ij->i", diff, diff)
             dist = np.maximum(dist, 1e-16)
-            inv = dist ** (-2.0 / (m - 1.0))
+            # dist stores squared Euclidean distances; the standard FCM
+            # update therefore uses exponent -1/(m-1).
+            inv = dist ** (-1.0 / (m - 1.0))
             U_new = inv / inv.sum(axis=0, keepdims=True)
             if np.abs(U_new - U).max() < tol:
                 U = U_new
@@ -164,7 +175,9 @@ def gaussian_membership_predict(X, centers, spreads, k):
 
 
 def tsk_weights(mu):
-    f = np.prod(mu, axis=1) + 1e-12
+    log_f = np.log(np.maximum(mu, np.finfo(float).tiny)).sum(axis=1)
+    log_f -= np.max(log_f, axis=1, keepdims=True)
+    f = np.exp(log_f)
     return f / f.sum(axis=1, keepdims=True)
 
 
@@ -241,12 +254,16 @@ class TSK_Bayesian:
         Phi, _ = tsk_phi(tsk_weights(self.mu_), X)
         prec_prior = np.eye(P) / self.tau2
         prec_post = Phi.T @ Phi + prec_prior
-        cov_post = np.linalg.inv(prec_post)
+        cov_post = np.linalg.solve(prec_post, np.eye(P))
+        cov_post = 0.5 * (cov_post + cov_post.T)
         mean_post = cov_post @ (Phi.T @ y)
         resid = y - Phi @ mean_post
-        a0, b0 = 0.01, 0.01
+        a0, b0 = SIGMA2_A0, SIGMA2_B0
         a_n = a0 + n / 2
         b_n = b0 + 0.5 * (resid @ resid + mean_post @ prec_prior @ mean_post)
+        self.prec_post_ = prec_post
+        self.cov_post_ = cov_post
+        self.a_n_, self.b_n_ = a_n, b_n
         self.sigma2_ = b_n / max(a_n - 1, 1e-6)
         self.beta_ = mean_post
         self.cov_beta_ = cov_post * self.sigma2_
@@ -256,10 +273,17 @@ class TSK_Bayesian:
         mu = gaussian_membership_predict(X, self.ctr_, self.spreads_, self.k)
         Phi, _ = tsk_phi(tsk_weights(mu), X)
         mean_pred = Phi @ self.beta_
-        var = np.array([self.sigma2_ + Phi[i] @ self.cov_beta_ @ Phi[i]
-                        for i in range(len(X))])
-        std = np.sqrt(np.maximum(var, 1e-8))
-        return mean_pred, mean_pred - 1.96 * std, mean_pred + 1.96 * std
+        factor = 1.0 + np.einsum(
+            "ij,jk,ik->i", Phi, self.cov_post_, Phi
+        )
+        scale = np.sqrt(np.maximum(self.b_n_ / self.a_n_ * factor, 1e-12))
+        lower = student_t.ppf(
+            0.025, df=2.0 * self.a_n_, loc=mean_pred, scale=scale
+        )
+        upper = student_t.ppf(
+            0.975, df=2.0 * self.a_n_, loc=mean_pred, scale=scale
+        )
+        return mean_pred, lower, upper
 
     @property
     def active_rules(self):
@@ -278,7 +302,7 @@ class TSK_SpikeSlab_Fast:
         self.ctr_, self.lbl_, _ = fcm(X, R)
         self.mu_, self.spreads_ = gaussian_membership_fit(X, self.ctr_, self.lbl_, R)
         Phi, _ = tsk_phi(tsk_weights(self.mu_), X)
-        beta_hat = Ridge(alpha=0.01).fit(Phi, y).coef_
+        beta_hat = Ridge(alpha=0.01, fit_intercept=False).fit(Phi, y).coef_
         self.sigma2_ = max(np.var(y - Phi @ beta_hat), 1e-4)
         self.pip_ = np.zeros(R)
         for j in range(R):
@@ -291,21 +315,36 @@ class TSK_SpikeSlab_Fast:
             rss0 = resid @ resid + 1e-12
             rss1 = (resid - Phi_j @ bj) @ (resid - Phi_j @ bj) + 1e-12
             log_bf = -0.5 * ((n * np.log(rss1 / n) + pp * np.log(n)) - n * np.log(rss0 / n))
-            po = (self.pi / (1 - self.pi)) * np.exp(log_bf)
-            self.pip_[j] = np.clip(po / (1 + po), 0.001, 0.999)
+            log_odds = np.log(self.pi / (1 - self.pi)) + log_bf
+            self.pip_[j] = np.clip(expit(log_odds), 0.001, 0.999)
         self.active_ = self.pip_ > 0.5
         idx = [i for j in range(R) if self.active_[j] for i in range(j * pp, (j + 1) * pp)]
         if not idx:
             idx, self.active_ = list(range(R * pp)), np.ones(R, bool)
         self.beta_ = np.zeros(R * pp)
-        self.beta_[idx] = Ridge(alpha=0.01).fit(Phi[:, idx], y).coef_
-        prec = np.zeros(R * pp)
-        for j in range(R):
-            prec[j * pp:(j + 1) * pp] = 1.0 / self.tau2 if self.active_[j] else 1e10
+        self.beta_[idx] = Ridge(
+            alpha=0.01, fit_intercept=False
+        ).fit(Phi[:, idx], y).coef_
+        active_idx = [
+            i for j in range(R) if self.active_[j]
+            for i in range(j * pp, (j + 1) * pp)
+        ]
+        self.cov_beta_ = np.zeros((R * pp, R * pp))
         try:
-            self.cov_beta_ = self.sigma2_ * np.linalg.inv(Phi.T @ Phi / self.sigma2_ + np.diag(prec))
+            Phi_active = Phi[:, active_idx]
+            post_precision = (
+                Phi_active.T @ Phi_active
+                + np.eye(len(active_idx)) / self.tau2
+            )
+            cov_active = self.sigma2_ * np.linalg.solve(
+                post_precision, np.eye(len(active_idx))
+            )
+            self.cov_beta_[np.ix_(active_idx, active_idx)] = cov_active
         except np.linalg.LinAlgError:
-            self.cov_beta_ = self.sigma2_ * np.linalg.inv(Phi.T @ Phi / self.sigma2_ + 1e-6 * np.eye(R * pp))
+            if active_idx:
+                cov_active = self.sigma2_ * np.linalg.pinv(post_precision)
+                self.cov_beta_[np.ix_(active_idx, active_idx)] = cov_active
+        self.cov_beta_ = 0.5 * (self.cov_beta_ + self.cov_beta_.T)
         return self
 
     def predict(self, X):
@@ -332,10 +371,22 @@ class _BMA_Mixin:
         Phi, _ = tsk_phi(tsk_weights(mu), X)
         means = Phi @ self.beta_samples_.T          # n_test x T
         mean_pred = means.mean(axis=1)
-        var_model = means.var(axis=1)                # epistemic (across-model)
-        total_var = self.sigma2_samples_.mean() + var_model
-        std = np.sqrt(np.maximum(total_var, 1e-12))
-        return mean_pred, mean_pred - 1.96 * std, mean_pred + 1.96 * std
+        std = np.sqrt(np.maximum(self.sigma2_samples_, 1e-12))[None, :]
+        lower = np.min(means - 12.0 * std, axis=1)
+        upper = np.max(means + 12.0 * std, axis=1)
+        quantiles = []
+        for level in (0.025, 0.975):
+            left, right = lower.copy(), upper.copy()
+            for _ in range(64):
+                mid = 0.5 * (left + right)
+                cdf = np.mean(
+                    ndtr((mid[:, None] - means) / std), axis=1
+                )
+                move_right = cdf < level
+                left = np.where(move_right, mid, left)
+                right = np.where(move_right, right, mid)
+            quantiles.append(0.5 * (left + right))
+        return mean_pred, quantiles[0], quantiles[1]
 
 
 class TSK_SpikeSlab_Gibbs(_BMA_Mixin):
@@ -353,7 +404,9 @@ class TSK_SpikeSlab_Gibbs(_BMA_Mixin):
         blocks = [Phi[:, j * pp:(j + 1) * pp] for j in range(R)]
         Ajs = [blocks[j].T @ blocks[j] for j in range(R)]
 
-        beta = Ridge(alpha=0.01).fit(Phi, y).coef_.copy()
+        beta = Ridge(
+            alpha=0.01, fit_intercept=False
+        ).fit(Phi, y).coef_.copy()
         gamma = np.ones(R)
         resid = y - Phi @ beta
         sigma2 = max(float(np.var(resid)), 1e-4)
@@ -368,24 +421,30 @@ class TSK_SpikeSlab_Gibbs(_BMA_Mixin):
                 Phi_j = blocks[j]
                 sl = slice(j * pp, (j + 1) * pp)
                 r = resid + Phi_j @ beta[sl]          # residual excluding block j
-                a = self.tau2 / sigma2
-                S = np.eye(pp) + a * Ajs[j]
+                S = np.eye(pp) + self.tau2 * Ajs[j]
                 _, logdetS = np.linalg.slogdet(S)
                 z = Phi_j.T @ r
-                log_bf = -0.5 * logdetS + 0.5 * (a / sigma2) * (z @ np.linalg.solve(S, z))
+                log_bf = -0.5 * logdetS + 0.5 * (
+                    self.tau2 / sigma2
+                ) * (z @ np.linalg.solve(S, z))
                 lo = np.log(self.pi / (1 - self.pi)) + log_bf
-                gamma[j] = 1.0 if rng.rand() < 1.0 / (1.0 + np.exp(-lo)) else 0.0
+                gamma[j] = 1.0 if rng.rand() < expit(lo) else 0.0
                 if gamma[j] == 1.0:
-                    Vj = np.linalg.inv(Ajs[j] / sigma2 + np.eye(pp) / self.tau2 + 1e-10 * np.eye(pp))
+                    post_precision = Ajs[j] + np.eye(pp) / self.tau2
+                    Vj = sigma2 * np.linalg.solve(
+                        post_precision, np.eye(pp)
+                    )
                     Vj = 0.5 * (Vj + Vj.T)
-                    mj = Vj @ (Phi_j.T @ r) / sigma2
+                    mj = np.linalg.solve(post_precision, Phi_j.T @ r)
                     beta[sl] = mj + np.linalg.cholesky(Vj) @ rng.standard_normal(pp)
                 else:
                     beta[sl] = 0.0
                 resid = r - Phi_j @ beta[sl]
             ssr = resid @ resid
-            a_post = 0.01 + n / 2
-            b_post = 0.01 + 0.5 * ssr
+            a_post = SIGMA2_A0 + (n + int(gamma.sum()) * pp) / 2
+            b_post = SIGMA2_B0 + 0.5 * (
+                ssr + (beta @ beta) / self.tau2
+            )
             sigma2 = 1.0 / rng.gamma(a_post, 1.0 / b_post)
             if it >= self.n_burn:
                 i = it - self.n_burn
@@ -424,7 +483,9 @@ class TSK_SSVS_Gibbs(_BMA_Mixin):
         self.Phi_ = Phi
         cols2 = (Phi ** 2).sum(axis=0)              # ||phi_i||^2 per coefficient
 
-        beta = Ridge(alpha=0.01).fit(Phi, y).coef_.copy()
+        beta = Ridge(
+            alpha=0.01, fit_intercept=False
+        ).fit(Phi, y).coef_.copy()
         gamma = np.ones(P)
         resid = y - Phi @ beta
         sigma2 = max(float(np.var(resid)), 1e-4)
@@ -438,23 +499,26 @@ class TSK_SSVS_Gibbs(_BMA_Mixin):
             for i in range(P):
                 phi_i = Phi[:, i]
                 r = resid + phi_i * beta[i]          # residual excluding coeff i
-                a = self.tau2 / sigma2
-                denom = 1.0 + a * cols2[i]
+                denom = 1.0 + self.tau2 * cols2[i]
                 logdet = np.log(denom)
                 z = float(phi_i @ r)
-                log_bf = -0.5 * logdet + 0.5 * (a / sigma2) * z * z / denom
+                log_bf = -0.5 * logdet + 0.5 * (
+                    self.tau2 / sigma2
+                ) * z * z / denom
                 lo = np.log(self.pi / (1 - self.pi)) + log_bf
-                gamma[i] = 1.0 if rng.rand() < 1.0 / (1.0 + np.exp(-lo)) else 0.0
+                gamma[i] = 1.0 if rng.rand() < expit(lo) else 0.0
                 if gamma[i] == 1.0:
-                    v = 1.0 / (cols2[i] / sigma2 + 1.0 / self.tau2)
-                    m = v * z / sigma2
+                    v = sigma2 / (cols2[i] + 1.0 / self.tau2)
+                    m = z / (cols2[i] + 1.0 / self.tau2)
                     beta[i] = m + np.sqrt(v) * rng.standard_normal()
                 else:
                     beta[i] = 0.0
                 resid = r - phi_i * beta[i]
             ssr = resid @ resid
-            a_post = 0.01 + n / 2
-            b_post = 0.01 + 0.5 * ssr
+            a_post = SIGMA2_A0 + (n + int(gamma.sum())) / 2
+            b_post = SIGMA2_B0 + 0.5 * (
+                ssr + (beta @ beta) / self.tau2
+            )
             sigma2 = 1.0 / rng.gamma(a_post, 1.0 / b_post)
             if it >= self.n_burn:
                 i = it - self.n_burn

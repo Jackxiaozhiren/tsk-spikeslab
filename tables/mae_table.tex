@@ -1,0 +1,21 @@
+\begin{table}[htbp]
+\centering
+\caption{Mean absolute error under the rebuilt 30-split protocol.}
+\label{tab:mae}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrr}
+\toprule
+Method & Energy-Heating & Energy-Cooling & Concrete \\
+\midrule
+TSK-LS & 1.521 & 1.926 & 5.828 \\
+Bayesian-TSK & 1.526 & 1.931 & 5.829 \\
+TSK-SpikeSlab-BIC & 1.539 & 1.938 & 5.829 \\
+TSK-SpikeSlab-Gibbs & 1.531 & 1.941 & 5.849 \\
+Random Forest & 0.329 & 1.014 & 3.617 \\
+SVR & 1.803 & 2.054 & 7.767 \\
+Gaussian Process & 0.338 & 0.924 & 4.009 \\
+Conformal-TSK-LS & 1.563 & 1.957 & 5.793 \\
+\bottomrule
+\end{tabular}
+\end{table}

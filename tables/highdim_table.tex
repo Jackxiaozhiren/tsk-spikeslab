@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering
+\caption{High-dimensional probe on Superconductivity (subsample $n=3000$, $d=81$, $R=5$, 30 splits).}
+\label{tab:highdim}
+\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+Method & RMSE & $R^2$ & PICP & MPIW \\
+\midrule
+TSK LS & 14.389 & 0.820 & -- & -- \\
+Bayesian TSK & 14.292 & 0.822 & 0.921 & 52.884 \\
+SpikeSlab Gibbs & 16.432 & 0.764 & 0.921 & 59.868 \\
+SSVS Gibbs ($\tau^2=$1) & 14.655 & 0.813 & 0.934 & 58.375 \\
+SSVS Gibbs ($\tau^2=$10) & 14.447 & 0.818 & 0.927 & 54.208 \\
+\bottomrule
+\end{tabular}
+\end{table}

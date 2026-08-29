@@ -25,7 +25,7 @@ from tsk_core import (
     load_energy, load_concrete, append_noise_features,
     get_splits, compute_metrics,
     TSK_LS, TSK_Bayesian, TSK_SpikeSlab_Fast, TSK_SpikeSlab_Gibbs, TSK_SSVS_Gibbs,
-    DATA_DIR, SEED,
+    OUTPUT_DIR, SEED,
 )
 
 N_SPLITS = 30
@@ -107,7 +107,8 @@ def run_main_comparison():
             rm = np.mean([r["RMSE"] for r in rows]); r2 = np.mean([r["R2"] for r in rows])
             print(f"  {name:<16} RMSE={rm:.3f}  R2={r2:+.3f}  ({time.time()-t0:.0f}s)")
         results[ds_name] = ds_res
-    with open(os.path.join(DATA_DIR, "tier1_v2.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "tier1_v2.json"), "w") as f:
         json.dump({k: {kk: vv for kk, vv in v.items()} for k, v in results.items()},
                   f, indent=2, default=float)
     return results
@@ -134,7 +135,8 @@ def run_tau2_sensitivity():
         p = np.mean([r["PICP"] for r in rows])
         out[str(tau2)] = rows
         print(f"  tau2={tau2:<6} RMSE={rm:.3f}  R2={r2:+.3f}  PICP={p:.3f}")
-    with open(os.path.join(DATA_DIR, "tier2_tau2_v2.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "tier2_tau2_v2.json"), "w") as f:
         json.dump({k: v for k, v in out.items()}, f, indent=2, default=float)
     return out
 
@@ -170,7 +172,8 @@ def run_noise_regime():
         for name in ["TSK-LS", "SpikeSlab-Gibbs", "SSVS-Gibbs"]:
             line += f"{name}: RMSE={row[name]['RMSE']:.3f} R2={row[name]['R2']:+.3f}  "
         print(line)
-    with open(os.path.join(DATA_DIR, "tier3_noise_v2.json"), "w") as f:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR, "tier3_noise_v2.json"), "w") as f:
         json.dump(out, f, indent=2, default=float)
     return out
 
@@ -179,4 +182,4 @@ if __name__ == "__main__":
     run_main_comparison()
     run_tau2_sensitivity()
     run_noise_regime()
-    print("\n\nAll tiers complete. Results in", DATA_DIR)
+    print("\n\nAll tiers complete. Results in", OUTPUT_DIR)

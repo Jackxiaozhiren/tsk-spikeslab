@@ -1,36 +1,59 @@
 # Reproducibility
 
-## Core reproduction path
+## Scientific authority
 
-The released workflow uses:
+For the ASOC manuscript, the controlling evidence is the `v2.0.0` line: corrected source under `src/`, 30 regression/correctness tests under `tests/`, and frozen result artifacts under `evidence/`. The older `v1.0` release is historical and must not be mixed with the ASOC result set.
+
+## Integrity checks
 
 ```bash
-pip install -r requirements.txt
-python src/experiment_v2.py
-python src/figures_v2.py
+pip install -r requirements-ci.txt
+python -m compileall -q src tests tools
+pytest -q
+python tools/verify_frozen_results.py
 ```
 
-The experiments use `SEED = 42` and obtain the UCI Energy Efficiency (id 242) and Concrete Compressive Strength (id 165) datasets through `ucimlrepo`.
+`tools/verify_frozen_results.py` verifies the original result-file SHA-256 manifest, checks selected manuscript headline values directly from the frozen JSON, and confirms that public raw `.npz` caches are absent.
 
-## Environment policy
+## Frozen protocol
 
-The current `requirements.txt` declares compatible lower bounds and is suitable for ordinary installation, but it is not proof of the exact package versions used for the manuscript results.
+- Seed: `42`.
+- Main evaluation: 30 deterministic 80/20 splits.
+- Bayesian predictive evaluation: 512 predictive samples in the rebuilt main protocol.
+- Split conformal: outer-train data are further split with calibration fraction 0.25; its protocol is therefore not identical to the ordinary TSK fit.
+- Energy Efficiency: UCI 242; Heating and Cooling are treated as separate targets.
+- Concrete Compressive Strength: UCI 165.
+- High-dimensional probe: Superconductivity UCI 464, labeled as a probe rather than a main benchmark.
 
-For the archival manuscript release, export the exact environment from the machine or container used for the final run (for example, a `pip freeze`/lock file or an exact Conda environment). Do not infer or fabricate historical package versions after the fact.
+The exact protocol metadata is embedded in `evidence/main_rebuilt.json`.
 
-## Archival release checklist
+## Correctness changes relative to historical v1.0
 
-Before assigning a DOI to the manuscript reproducibility release:
+The ASOC line includes corrections to the fuzzy-c-means membership update, log-domain firing strengths, no-intercept linear consequent initialization, scaled Gaussian/inverse-gamma calculations, spike-and-slab Gibbs conditionals, and direct posterior-predictive quantiles. These changes materially alter the old result narrative; therefore the historical result files are not manuscript-active.
 
-1. record the exact Git commit SHA;
-2. record Python, OS, and exact dependency versions;
-3. record the dataset IDs and retrieval date/version information available from the provider;
-4. verify that `SEED = 42` and all experiment hyperparameters match the manuscript;
-5. regenerate the manuscript figures/tables from a clean environment;
-6. record SHA-256 checksums for the released result files and publication figures;
-7. document any platform-dependent numerical tolerance;
-8. tag the verified state as a semantic version (recommended `v1.0.0`) and archive that tag in a DOI-issuing repository.
+## Regenerating manuscript artifacts
 
-## CI versus manuscript reproduction
+```bash
+python src/generate_phase6_artifacts.py --output-dir /tmp/asoc_artifacts
+```
 
-Continuous integration is intentionally a fast structural/smoke check. It verifies that the source compiles and imports; it is not a substitute for the full manuscript experiment, which downloads benchmark data and performs computationally heavier Bayesian experiments.
+This reads the frozen `evidence/*.json` files and regenerates the manuscript tables and figures without rerunning the expensive benchmark experiments.
+
+## Full experimental rebuild
+
+A full rebuild requires obtaining the UCI datasets and running the relevant drivers under `src/`. Set `TSK_OUTPUT_DIR` to a new directory so historical/public evidence is never overwritten. Example:
+
+```bash
+export TSK_OUTPUT_DIR="$PWD/rebuild_results_local"
+python src/rebuild_phase4.py
+```
+
+Additional diagnostic scripts (`diagnostics_gp.py`, `highdim_probe.py`, `highdim_tau2_grid.py`, `synthetic_gamma_verify.py`, and related utilities) correspond to the evidence files documented in `docs/CLAIM_EVIDENCE_MAP.md`.
+
+## Environment boundary
+
+`requirements.txt` is a compatibility specification. The observed manuscript rebuild environment is recorded separately in `docs/ENVIRONMENT_OBSERVED_2026-08-29.txt`.
+
+## Inference boundary
+
+The release does not claim universal MCMC convergence, universal calibration, a general sparsity advantage, or predictive superiority of spike-and-slab TSK. Raw coefficient diagnostics include \(\hat R_{max}>1.01\) in representative runs; those diagnostics are reported rather than hidden.
