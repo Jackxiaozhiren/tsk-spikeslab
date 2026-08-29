@@ -31,7 +31,7 @@ Additional frozen diagnostics include:
 
 - `src/` — corrected TSK/Bayesian/Gibbs implementation and rebuild scripts.
 - `tests/` — 30 correctness/regression tests.
-- `evidence/` — frozen JSON/log evidence plus the original results SHA-256 manifest.
+- `evidence/` — 11 frozen structured JSON result artifacts plus their SHA-256 manifest. Execution `.log` traces remain local audit material and are not part of the public release.
 - `tables/` and `figures/` — manuscript-active artifacts generated from the frozen evidence.
 - `manuscript.tex`, `supplementary.tex`, `references.bib` — ASOC-aligned source snapshot.
 - `docs/CLAIM_EVIDENCE_MAP.md` — claim-to-evidence boundary.
@@ -49,7 +49,7 @@ pytest -q
 python tools/verify_frozen_results.py
 ```
 
-The clean release candidate passes **30/30 tests**. CI also verifies the frozen-result checksums and the deterministic Git-tracked release manifest.
+The clean release candidate passes **30/30 tests**. CI also verifies the frozen structured-result checksums and the deterministic Git-tracked release manifest.
 
 ## Regenerating tables and figures from frozen evidence
 
