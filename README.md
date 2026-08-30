@@ -1,10 +1,15 @@
 # Bayesian TSK Fuzzy Regression — ASOC Reproducibility Materials
 
+[![Release](https://img.shields.io/github/v/release/Jackxiaozhiren/tsk-spikeslab?label=release)](https://github.com/Jackxiaozhiren/tsk-spikeslab/releases/tag/v2.0.0)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22161162.svg)](https://doi.org/10.5281/zenodo.22161162)
+
 Reproducibility repository for the Applied Soft Computing manuscript:
 
 **Correctness and Predictive Uncertainty in Bayesian TSK Fuzzy Regression: A Reproducible Evaluation of Spike-and-Slab Model Averaging**
 
 ## Current manuscript-active state
+
+The frozen scientific snapshot is **[`v2.0.0`](https://github.com/Jackxiaozhiren/tsk-spikeslab/releases/tag/v2.0.0)** and its version-specific Zenodo archive is **[10.5281/zenodo.22161162](https://doi.org/10.5281/zenodo.22161162)**.
 
 This `v2.0.0` line supersedes the earlier Information Sciences-era `v1.0` snapshot for the current ASOC manuscript. The historical release remains available for provenance, but it is **not** the evidence source for the ASOC results.
 
@@ -67,12 +72,14 @@ The observed manuscript-workstation environment is recorded in `docs/ENVIRONMENT
 
 ## Version history
 
-- `v1.0` — historical Information Sciences-era snapshot and earlier Zenodo archive.
-- `v2.0.0` — ASOC-aligned corrected implementation, rebuilt evidence, tests, and manuscript-active artifacts.
+- `v1.0` — historical Information Sciences-era snapshot and Zenodo version DOI `10.5281/zenodo.21929319`.
+- `v2.0.0` — ASOC-aligned corrected implementation, rebuilt evidence, tests, manuscript-active artifacts, and Zenodo version DOI `10.5281/zenodo.22161162`.
+
+The `v2.0.0` tag and Zenodo record remain the immutable scientific snapshot even if `main` later receives documentation-only discoverability updates.
 
 ## Citation
 
-Use GitHub's **Cite this repository** metadata from `CITATION.cff`. The historical Zenodo DOI `10.5281/zenodo.21929319` corresponds to the earlier snapshot; a new version-specific Zenodo DOI should be used for the ASOC-aligned `v2.0.0` snapshot once deposited.
+For the ASOC-aligned reproducibility materials, cite the version-specific Zenodo DOI **10.5281/zenodo.22161162** and use GitHub's **Cite this repository** metadata from `CITATION.cff`. The earlier DOI `10.5281/zenodo.21929319` corresponds only to the historical `v1.0` snapshot.
 
 ## License
 
