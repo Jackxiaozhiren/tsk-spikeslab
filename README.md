@@ -7,6 +7,12 @@ Reproducibility repository for the Applied Soft Computing manuscript:
 
 **Correctness and Predictive Uncertainty in Bayesian TSK Fuzzy Regression: A Reproducible Evaluation of Spike-and-Slab Model Averaging**
 
+## Reviewer navigation
+
+- [Claim-to-evidence map](docs/CLAIM_EVIDENCE_MAP.md) · [Results provenance](docs/RESULTS_PROVENANCE.md)
+- [Reproducibility steps](docs/REPRODUCIBILITY.md) · [Data availability](docs/DATA_AVAILABILITY.md)
+- Use the versioned release and Zenodo DOI cited below to identify the frozen scientific snapshot; subsequent `main`-branch documentation changes are not a new experimental release.
+
 ## Current manuscript-active state
 
 The frozen scientific snapshot is **[`v2.0.0`](https://github.com/Jackxiaozhiren/tsk-spikeslab/releases/tag/v2.0.0)** and its version-specific Zenodo archive is **[10.5281/zenodo.22161162](https://doi.org/10.5281/zenodo.22161162)**.
